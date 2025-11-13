@@ -50,6 +50,7 @@ class QueueRunCommand extends Command
 
     /**
      * Execute the console command.
+     * Example: php pool queue:run --queue=reports --sleep=10 --memory=1024 --timeout=3600
      *
      * @return int
      */
