@@ -5,6 +5,7 @@ namespace Doppar\Queue;
 use Phaseolies\Providers\ServiceProvider;
 use Doppar\Queue\QueueManager;
 use Doppar\Queue\Commands\QueueRunCommand;
+use Doppar\Queue\Commands\QueueRetryCommand;
 
 class QueueServiceProvider extends ServiceProvider
 {
@@ -32,7 +33,8 @@ class QueueServiceProvider extends ServiceProvider
         ], 'migrations');
 
         $this->commands([
-            QueueRunCommand::class
+            QueueRunCommand::class,
+            QueueRetryCommand::class
         ]);
     }
 }
