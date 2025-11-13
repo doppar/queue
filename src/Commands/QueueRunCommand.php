@@ -65,6 +65,21 @@ class QueueRunCommand extends Command
             $this->info("Configuration: sleep={$sleep}s, memory={$maxMemory}MB, timeout={$maxTime}s");
 
             try {
+                $this->worker->setOnJobProcessing(function ($job) {
+                    $jobClass = get_class($job);
+                    $jobId = $job->getJobId() ?? 'N/A';
+                    $this->info("✔ Processing job [{$jobClass}] (ID: {$jobId})");
+                });
+
+                $this->worker->setOnJobProcessed(function ($job) {
+                    $jobClass = get_class($job);
+                    $jobId = $job->getJobId() ?? 'N/A';
+                    $this->info("✔ Processed job [{$jobClass}] (ID: {$jobId})");
+
+                    // Flush system output buffer
+                    flush();
+                });
+
                 $this->worker->daemon($queue, [
                     'sleep' => $sleep,
                     'maxMemory' => $maxMemory,

@@ -43,6 +43,21 @@ class QueueWorker
     protected $maxMemory = 128;
 
     /**
+     * Callback to be executed **before** a job is processed.
+     *
+     * @var callable|null
+     */
+    protected $onJobProcessing;
+
+    /**
+     * Callback to be executed **after** a job has been successfully processed.
+     *
+     *
+     * @var callable|null
+     */
+    protected $onJobProcessed;
+
+    /**
      * Create a new queue worker.
      *
      * @param QueueManager $manager
@@ -50,6 +65,28 @@ class QueueWorker
     public function __construct(QueueManager $manager)
     {
         $this->manager = $manager;
+    }
+
+    /**
+     * Set the callback to be executed **before** a job is processed.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    public function setOnJobProcessing(callable $callback): void
+    {
+        $this->onJobProcessing = $callback;
+    }
+
+    /**
+     * Set the callback to be executed **after** a job has been processed.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    public function setOnJobProcessed(callable $callback): void
+    {
+        $this->onJobProcessed = $callback;
     }
 
     /**
@@ -125,13 +162,20 @@ class QueueWorker
             $job = $this->manager->unserializeJob($queueJob->payload);
             $job->attempts = $queueJob->attempts;
 
+            if (is_callable($this->onJobProcessing)) {
+                ($this->onJobProcessing)($job);
+            }
+
             // Execute the job
             $this->executeJob($job);
 
             // Delete the job from queue if successful
             $this->manager->delete($queueJob);
 
-            $this->logInfo("Job {$job->getJobId()} processed successfully");
+            // Trigger onJobProcessed callback
+            if (is_callable($this->onJobProcessed)) {
+                ($this->onJobProcessed)($job);
+            }
         } catch (\Throwable $e) {
             $this->handleJobException($queueJob, $job ?? null, $e);
         }
