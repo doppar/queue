@@ -50,21 +50,37 @@ class QueueRunCommand extends Command
 
     /**
      * Execute the console command.
+     * Example: php pool queue:run --queue=reports --sleep=10 --memory=1024 --timeout=3600
      *
      * @return int
      */
     protected function handle(): int
     {
         return $this->withTiming(function () {
-            $queue = $this->getOption('queue', 'default');
-            $sleep = (int) $this->getOption('sleep', 3);
-            $maxMemory = (int) $this->getOption('memory', 128);
-            $maxTime = (int) $this->getOption('timeout', 3600);
+            $queue = $this->option('queue', 'default');
+            $sleep = (int) $this->option('sleep', 3);
+            $maxMemory = (int) $this->option('memory', 128);
+            $maxTime = (int) $this->option('timeout', 3600);
 
             $this->info("Starting queue worker on queue: {$queue}");
             $this->info("Configuration: sleep={$sleep}s, memory={$maxMemory}MB, timeout={$maxTime}s");
 
             try {
+                $this->worker->setOnJobProcessing(function ($job) {
+                    $jobClass = get_class($job);
+                    $jobId = $job->getJobId() ?? 'N/A';
+                    $this->info("✔ Processing job [{$jobClass}] (ID: {$jobId})");
+                });
+
+                $this->worker->setOnJobProcessed(function ($job) {
+                    $jobClass = get_class($job);
+                    $jobId = $job->getJobId() ?? 'N/A';
+                    $this->info("✔ Processed job [{$jobClass}] (ID: {$jobId})");
+
+                    // Flush system output buffer
+                    flush();
+                });
+
                 $this->worker->daemon($queue, [
                     'sleep' => $sleep,
                     'maxMemory' => $maxMemory,
@@ -78,30 +94,5 @@ class QueueRunCommand extends Command
                 return Command::FAILURE;
             }
         }, 'Queue worker stopped gracefully.');
-    }
-
-    /**
-     * Get an option value.
-     *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
-     */
-    protected function getOption(string $key, $default = null)
-    {
-        // Implementation depends on your console command system
-        // This is a placeholder - adapt to your actual implementation
-        global $argv;
-
-        foreach ($argv as $i => $arg) {
-            if (strpos($arg, "--{$key}=") === 0) {
-                return substr($arg, strlen("--{$key}="));
-            }
-            if ($arg === "--{$key}" && isset($argv[$i + 1])) {
-                return $argv[$i + 1];
-            }
-        }
-
-        return $default;
     }
 }
