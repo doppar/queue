@@ -1,11 +1,11 @@
 {
-    "name": "doppar/guard",
-    "description": "A authorization package for doppar framework",
+    "name": "doppar/queue",
+    "description": "A lightweight queue management library for the Doppar framework.",
     "type": "library",
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/doppar/guard/issues",
-        "source": "https://github.com/doppar/guard"
+        "issues": "https://github.com/doppar/queue/issues",
+        "source": "https://github.com/doppar/queue"
     },
     "authors": [
         {
@@ -15,16 +15,17 @@
     ],
     "require-dev": {
         "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^12.1.5"
+        "phpunit/phpunit": "^12.1.5",
+        "doppar/framework": "^3.0.0"
     },
     "autoload": {
         "psr-4": {
-            "Doppar\\Authorizer\\": "src/"
+            "Doppar\\Queue\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Doppar\\Authorizer\\Tests\\": "tests/"
+            "Doppar\\Queue\\Tests\\": "tests/"
         }
     },
     "extra": {
@@ -33,13 +34,13 @@
         },
         "doppar": {
             "providers": [
-                "Doppar\\Authorizer\\GuardServiceProvider"
+                "Doppar\\Queue\\QueueServiceProvider"
             ]
         }
     },
     "config": {
         "sort-packages": true
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {}
 }
