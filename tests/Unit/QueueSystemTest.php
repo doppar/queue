@@ -148,4 +148,21 @@ class QueueSystemTest extends TestCase
         $this->assertNotNull($queueJob);
         $this->assertEquals('emails', $queueJob->queue);
     }
+
+    public function testPushJobWithDelay(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        $job->delayFor(300); // 5 minutes
+
+        $beforeTime = time();
+        $jobId = Queue::push($job);
+        $afterTime = time();
+
+        $queueJob = MockQueueJob::where('queue', 'default')->first();
+        $this->assertNotNull($queueJob);
+
+        // available_at should be current time + 300 seconds
+        $this->assertGreaterThanOrEqual($beforeTime + 300, $queueJob->available_at);
+        $this->assertLessThanOrEqual($afterTime + 300, $queueJob->available_at);
+    }
 }
