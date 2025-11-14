@@ -3,7 +3,7 @@
 namespace Doppar\Queue\Tests\Mock;
 
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
-use Doppar\Queue\Models\FailedJob;
+use Doppar\Queue\Tests\Mock\Models\MockFailedJob;
 use Doppar\Queue\Exceptions\QueueException;
 use Doppar\Queue\Contracts\JobInterface;
 
@@ -109,7 +109,7 @@ class TestQueueManager
     public function markAsFailed(MockQueueJob $queueJob, \Throwable $exception): void
     {
         try {
-            FailedJob::create([
+            MockFailedJob::create([
                 'connection' => 'database',
                 'queue' => $queueJob->queue,
                 'payload' => $queueJob->payload,

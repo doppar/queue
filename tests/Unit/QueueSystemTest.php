@@ -3,14 +3,15 @@
 namespace Doppar\Queue\Tests\Unit;
 
 use Phaseolies\Support\UrlGenerator;
+use Phaseolies\Support\LoggerService;
 use Phaseolies\Http\Request;
 use Phaseolies\Database\Database;
 use Phaseolies\DI\Container;
-use PHPUnit\Metadata\Test;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
+use Doppar\Queue\Tests\Mock\Models\MockFailedJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
 use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestFailingJob;
@@ -33,6 +34,7 @@ class QueueSystemTest extends TestCase
         $container->bind('url', fn() => UrlGenerator::class);
         $container->bind('db', fn() => new Database('default'));
         $container->singleton('queue.worker', TestQueueManager::class);
+        $container->singleton('log', LoggerService::class);
 
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -284,5 +286,45 @@ class QueueSystemTest extends TestCase
         $queueJob = MockQueueJob::find($queueJob->id);
         $this->assertNull($queueJob->reserved_at);
         $this->assertEquals(1, $queueJob->attempts);
+    }
+
+    public function testJobMovedToFailedAfterMaxAttempts(): void
+    {
+        $job = new TestFailingJob();
+        $job->tries = 2;
+        Queue::push($job);
+
+        // First attempt
+        $queueJob = Queue::pop('default');
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+        } catch (\Exception $e) {
+            Queue::release($queueJob, 0);
+        }
+
+        // Make job available immediately
+        MockQueueJob::where('id', $queueJob->id)->update(['available_at' => time() - 1]);
+
+        // Second attempt
+        $queueJob = Queue::pop('default');
+        $this->assertEquals(2, $queueJob->attempts);
+
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+        } catch (\Exception $e) {
+            // Max attempts reached, mark as failed
+            Queue::markAsFailed($queueJob, $e);
+        }
+
+        // Verify job is in failed_jobs table
+        $failedJob = MockFailedJob::where('queue', 'default')->first();
+        $this->assertNotNull($failedJob);
+        $this->assertStringContainsString('Test failure', $failedJob->exception);
+
+        // Verify job is removed from queue_jobs
+        $queueJob = MockQueueJob::find($queueJob->id);
+        $this->assertNull($queueJob);
     }
 }
