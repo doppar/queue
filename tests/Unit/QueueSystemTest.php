@@ -1,0 +1,112 @@
+<?php
+
+namespace Doppar\Queue\Tests\Unit;
+
+use Doppar\Queue\Tests\Mock\MockContainer;
+use Phaseolies\Support\UrlGenerator;
+use Phaseolies\Http\Request;
+use Phaseolies\Database\Database;
+use Phaseolies\DI\Container;
+use PHPUnit\Framework\TestCase;
+use PDO;
+use Doppar\Queue\QueueWorker;
+use Doppar\Queue\QueueManager;
+
+class QueueSystemTest extends TestCase
+{
+    private $pdo;
+    private $manager;
+    private $worker;
+
+    protected function setUp(): void
+    {
+        Container::setInstance(new MockContainer());
+        $container = new Container();
+        $container->bind('request', fn() => new Request());
+        $container->bind('url', fn() => UrlGenerator::class);
+        $container->bind('db', fn() => new Database('default'));
+
+        $this->pdo = new PDO('sqlite::memory:');
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $this->createQueueTables();
+        $this->setupDatabaseConnections();
+
+        $this->manager = new QueueManager();
+        $this->worker = new QueueWorker($this->manager);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->pdo = null;
+        $this->manager = null;
+        $this->worker = null;
+        $this->tearDownDatabaseConnections();
+    }
+
+    private function createQueueTables(): void
+    {
+        // Create queue_jobs table
+        $this->pdo->exec("
+            CREATE TABLE queue_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                queue TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                reserved_at INTEGER,
+                available_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+        ");
+
+        $this->pdo->exec("
+            CREATE INDEX idx_queue_reserved ON queue_jobs(queue, reserved_at)
+        ");
+
+        // Create failed_jobs table
+        $this->pdo->exec("
+            CREATE TABLE failed_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                connection TEXT NOT NULL,
+                queue TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                exception TEXT NOT NULL,
+                failed_at INTEGER NOT NULL
+            )
+        ");
+
+        $this->pdo->exec("
+            CREATE INDEX idx_failed_at ON failed_jobs(failed_at)
+        ");
+    }
+
+    private function setupDatabaseConnections(): void
+    {
+        $this->setStaticProperty(Database::class, 'connections', []);
+        $this->setStaticProperty(Database::class, 'transactions', []);
+
+        $this->setStaticProperty(Database::class, 'connections', [
+            'default' => $this->pdo,
+            'sqlite' => $this->pdo
+        ]);
+    }
+
+    private function tearDownDatabaseConnections(): void
+    {
+        $this->setStaticProperty(Database::class, 'connections', []);
+        $this->setStaticProperty(Database::class, 'transactions', []);
+    }
+
+    private function setStaticProperty(string $className, string $propertyName, $value): void
+    {
+        try {
+            $reflection = new \ReflectionClass($className);
+            $property = $reflection->getProperty($propertyName);
+            $property->setAccessible(true);
+            $property->setValue(null, $value);
+            $property->setAccessible(false);
+        } catch (\ReflectionException $e) {
+            $this->fail("Failed to set static property {$propertyName}: " . $e->getMessage());
+        }
+    }
+}
