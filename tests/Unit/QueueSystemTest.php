@@ -182,4 +182,22 @@ class QueueSystemTest extends TestCase
         $this->assertEquals(1, $queueJob->attempts);
         $this->assertNotNull($queueJob->reserved_at);
     }
+
+    public function testPopJobRespectsAvailableAt(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        $job->delayFor(3600); // 1 hour delay
+        Queue::push($job);
+
+        // Should not pop job that's not available yet
+        $queueJob = Queue::pop('default');
+        $this->assertNull($queueJob);
+
+        // Manually update available_at to make it available
+        MockQueueJob::where('queue', 'default')->update(['available_at' => time() - 1]);
+
+        // Now it should pop
+        $queueJob = Queue::pop('default');
+        $this->assertNotNull($queueJob);
+    }
 }
