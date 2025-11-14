@@ -623,4 +623,71 @@ class QueueSystemTest extends TestCase
         $this->assertStringStartsWith('job_', $jobId1);
         $this->assertStringStartsWith('job_', $jobId2);
     }
+
+    // =====================================================
+    // TEST QUERY BINDING
+    // =====================================================
+
+    public function testAvailableJobsScope(): void
+    {
+         // Create two available jobs
+        $job1 = new TestEmailJob('test1@example.com', 'Subject 1');
+        Queue::push($job1);
+
+        $job2 = new TestEmailJob('test2@example.com', 'Subject 2');
+        Queue::push($job2);
+
+        // Create delayed job (not available yet)
+        $job3 = new TestEmailJob('test3@example.com', 'Subject 3');
+        $job3->delayFor(3600);
+        Queue::push($job3);
+
+        // Before popping: 2 available jobs (job1 and job2), 1 delayed (job3)
+        $available = MockQueueJob::available('default')->count();
+        $this->assertEquals(2, $available);
+
+        // Pop one job (makes it reserved)
+        Queue::pop('default');
+
+        // After popping: 1 available job (job2), 1 reserved (job1), 1 delayed (job3)
+        $available = MockQueueJob::available('default')->count();
+        $this->assertEquals(1, $available);
+
+        // Verify total jobs in database
+        $total = MockQueueJob::where('queue', 'default')->count();
+        $this->assertEquals(3, $total);
+    }
+
+    // =====================================================
+    // TEST INTEGRATION
+    // =====================================================
+
+    public function testEndToEndJobProcessing(): void
+    {
+        // Create multiple jobs
+        $jobs = [
+            new TestEmailJob('user1@example.com', 'Welcome'),
+            new TestEmailJob('user2@example.com', 'Newsletter'),
+            new TestEmailJob('user3@example.com', 'Update'),
+        ];
+
+        foreach ($jobs as $job) {
+            Queue::push($job);
+        }
+
+        $this->assertEquals(3, Queue::size('default'));
+
+        // Process all jobs
+        $processed = 0;
+        while ($queueJob = Queue::pop('default')) {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+            Queue::delete($queueJob);
+            $processed++;
+        }
+
+        $this->assertEquals(3, $processed);
+        $this->assertEquals(0, Queue::size('default'));
+        $this->assertEquals(0, MockFailedJob::count());
+    }
 }
