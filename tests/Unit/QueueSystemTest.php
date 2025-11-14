@@ -13,9 +13,11 @@ use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
 use Doppar\Queue\Tests\Mock\Models\MockFailedJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
+use Doppar\Queue\Tests\Mock\Jobs\TestJobWithFailedCallback;
 use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestFailingJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestEmailJob;
+use Doppar\Queue\Tests\Mock\Jobs\TestComplexDataJob;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
 use Doppar\Queue\Facades\Queue;
@@ -380,5 +382,86 @@ class QueueSystemTest extends TestCase
         // Verify images queue is intact
         $size = Queue::size('images');
         $this->assertEquals(1, $size);
+    }
+
+    // =====================================================
+    // TEST JOB SERIALIZATION
+    // =====================================================
+
+    public function testJobSerialization(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        $job->setJobId('test_job_123');
+        $jobId = Queue::push($job);
+
+        $queueJob = MockQueueJob::where('queue', 'default')->first();
+        $this->assertNotNull($queueJob);
+
+        $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+
+        $this->assertInstanceOf(TestEmailJob::class, $unserializedJob);
+        $this->assertEquals('test@example.com', $unserializedJob->to);
+        $this->assertEquals('Test Subject', $unserializedJob->subject);
+    }
+
+    public function testJobSerializationWithComplexData(): void
+    {
+        $job = new TestComplexDataJob([
+            'user' => ['id' => 1, 'name' => 'John Doe'],
+            'settings' => ['timezone' => 'UTC', 'theme' => 'dark'],
+            'tags' => ['php', 'laravel', 'queue']
+        ]);
+        Queue::push($job);
+
+        $queueJob = MockQueueJob::where('queue', 'default')->first();
+        $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+
+        $this->assertEquals('John Doe', $unserializedJob->data['user']['name']);
+        $this->assertEquals(['php', 'laravel', 'queue'], $unserializedJob->data['tags']);
+    }
+
+    // =====================================================
+    // TEST FAILED JOBS
+    // =====================================================
+
+    public function testFailedJobStorage(): void
+    {
+        $job = new TestFailingJob();
+        Queue::push($job);
+
+        $queueJob = Queue::pop('default');
+
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+        } catch (\Exception $e) {
+            Queue::markAsFailed($queueJob, $e);
+        }
+
+        $failedJob = MockFailedJob::first();
+        $this->assertNotNull($failedJob);
+        $this->assertEquals('database', $failedJob->connection);
+        $this->assertEquals('default', $failedJob->queue);
+        $this->assertStringContainsString('RuntimeException', $failedJob->exception);
+        $this->assertStringContainsString('Test failure', $failedJob->exception);
+    }
+
+    public function testFailedJobCallback(): void
+    {
+        $job = new TestJobWithFailedCallback();
+        Queue::push($job);
+
+        $queueJob = Queue::pop('default');
+
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+        } catch (\Exception $e) {
+            Queue::markAsFailed($queueJob, $e);
+            $unserializedJob->failed($e);
+        }
+
+        // The failed callback should have been called
+        $this->assertTrue($unserializedJob->failedCalled);
     }
 }
