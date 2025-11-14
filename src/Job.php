@@ -2,6 +2,7 @@
 
 namespace Doppar\Queue;
 
+use Doppar\Queue\Facades\Queue;
 use Doppar\Queue\Contracts\JobInterface;
 
 abstract class Job implements JobInterface
@@ -144,5 +145,54 @@ abstract class Job implements JobInterface
         $this->jobDelay = $delay;
 
         return $this;
+    }
+
+    /**
+     * Dispatch the job to the queue.
+     *
+     * @return string Job ID
+     */
+    public function dispatch(): string
+    {
+        return Queue::push($this);
+    }
+
+    /**
+     * Dispatch the job to the queue after a delay.
+     *
+     * @param int $delay Delay in seconds
+     * @return string Job ID
+     */
+    public function dispatchAfter(int $delay): string
+    {
+        $this->delayFor($delay);
+
+        return $this->dispatch();
+    }
+
+    /**
+     * Dispatch the job to a specific queue.
+     *
+     * @param string $queue
+     * @return string Job ID
+     */
+    public function dispatchOn(string $queue): string
+    {
+        $this->onQueue($queue);
+
+        return $this->dispatch();
+    }
+
+    /**
+     * Dispatch the job.
+     *
+     * @param mixed ...$args
+     * @return string Job ID
+     */
+    public static function dispatchNow(...$args): string
+    {
+        $job = new static(...$args);
+
+        return $job->dispatch();
     }
 }
