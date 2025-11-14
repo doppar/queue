@@ -165,4 +165,21 @@ class QueueSystemTest extends TestCase
         $this->assertGreaterThanOrEqual($beforeTime + 300, $queueJob->available_at);
         $this->assertLessThanOrEqual($afterTime + 300, $queueJob->available_at);
     }
+
+    // =====================================================
+    // TEST JOB RETRIEVAL
+    // =====================================================
+
+    public function testPopJobFromQueue(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        Queue::push($job);
+
+        $queueJob = Queue::pop('default');
+
+        $this->assertNotNull($queueJob);
+        $this->assertInstanceOf(MockQueueJob::class, $queueJob);
+        $this->assertEquals(1, $queueJob->attempts);
+        $this->assertNotNull($queueJob->reserved_at);
+    }
 }
