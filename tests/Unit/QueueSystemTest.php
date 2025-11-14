@@ -345,4 +345,40 @@ class QueueSystemTest extends TestCase
         $size = Queue::size('default');
         $this->assertEquals(3, $size);
     }
+
+    public function testQueueClear(): void
+    {
+        $job1 = new TestEmailJob('test1@example.com', 'Subject 1');
+        $job2 = new TestEmailJob('test2@example.com', 'Subject 2');
+        $job3 = new TestEmailJob('test3@example.com', 'Subject 3');
+
+        Queue::push($job1);
+        Queue::push($job2);
+        Queue::push($job3);
+
+        $deleted = Queue::clear('default');
+        $this->assertEquals(1, $deleted);
+
+        $size = Queue::size('default');
+        $this->assertEquals(0, $size);
+    }
+
+    public function testClearSpecificQueue(): void
+    {
+        $emailJob = new TestEmailJob('test@example.com', 'Subject');
+        $emailJob->onQueue('emails');
+        Queue::push($emailJob);
+
+        $imageJob = new TestImageJob('/path/to/image.jpg');
+        $imageJob->onQueue('images');
+        Queue::push($imageJob);
+
+        // Clear only emails queue
+        $deleted = Queue::clear('emails');
+        $this->assertEquals(1, $deleted);
+
+        // Verify images queue is intact
+        $size = Queue::size('images');
+        $this->assertEquals(1, $size);
+    }
 }
