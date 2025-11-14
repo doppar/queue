@@ -327,4 +327,22 @@ class QueueSystemTest extends TestCase
         $queueJob = MockQueueJob::find($queueJob->id);
         $this->assertNull($queueJob);
     }
+
+    // =====================================================
+    // TEST QUEUE OPERATIONS
+    // =====================================================
+
+    public function testQueueSize(): void
+    {
+        $job1 = new TestEmailJob('test1@example.com', 'Subject 1');
+        $job2 = new TestEmailJob('test2@example.com', 'Subject 2');
+        $job3 = new TestEmailJob('test3@example.com', 'Subject 3');
+
+        Queue::push($job1);
+        Queue::push($job2);
+        Queue::push($job3);
+
+        $size = Queue::size('default');
+        $this->assertEquals(3, $size);
+    }
 }
