@@ -12,6 +12,7 @@ use PDO;
 use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
+use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestEmailJob;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
@@ -199,5 +200,32 @@ class QueueSystemTest extends TestCase
         // Now it should pop
         $queueJob = Queue::pop('default');
         $this->assertNotNull($queueJob);
+    }
+
+    public function testPopJobFromEmptyQueue(): void
+    {
+        $queueJob = $this->manager->pop('default');
+        $this->assertNull($queueJob);
+    }
+
+    public function testPopJobFromSpecificQueue(): void
+    {
+        $emailJob = new TestEmailJob('test@example.com', 'Subject');
+        $emailJob->onQueue('emails');
+        Queue::push($emailJob);
+
+        $imageJob = new TestImageJob('/path/to/image.jpg');
+        $imageJob->onQueue('images');
+        Queue::push($imageJob);
+
+        // Pop from emails queue
+        $queueJob = Queue::pop('emails');
+        $this->assertNotNull($queueJob);
+        $this->assertEquals('emails', $queueJob->queue);
+
+        // Pop from images queue
+        $queueJob = Queue::pop('images');
+        $this->assertNotNull($queueJob);
+        $this->assertEquals('images', $queueJob->queue);
     }
 }
