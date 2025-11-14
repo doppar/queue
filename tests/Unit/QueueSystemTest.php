@@ -13,6 +13,7 @@ use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
 use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
+use Doppar\Queue\Tests\Mock\Jobs\TestFailingJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestEmailJob;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
@@ -256,5 +257,32 @@ class QueueSystemTest extends TestCase
         // Verify job is removed
         $count = MockQueueJob::count();
         $this->assertEquals(0, $count);
+    }
+
+    public function testJobExecutionFailureAndRetry(): void
+    {
+        $job = new TestFailingJob();
+        $job->tries = 3;
+        $job->retryAfter = 60;
+        Queue::push($job);
+
+        // First attempt
+        $queueJob = Queue::pop('default');
+        $this->assertEquals(1, $queueJob->attempts);
+
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+            $this->fail('Job should have thrown an exception');
+        } catch (\Exception $e) {
+            // Job failed, release it back
+            $released = Queue::release($queueJob, $job->retryAfter);
+            $this->assertTrue($released);
+        }
+
+        // Verify job was released
+        $queueJob = MockQueueJob::find($queueJob->id);
+        $this->assertNull($queueJob->reserved_at);
+        $this->assertEquals(1, $queueJob->attempts);
     }
 }
