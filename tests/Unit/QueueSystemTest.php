@@ -464,4 +464,64 @@ class QueueSystemTest extends TestCase
         // The failed callback should have been called
         $this->assertTrue($unserializedJob->failedCalled);
     }
+
+    // =====================================================
+    // TEST QUEUE MODELS
+    // =====================================================
+
+    public function testQueueJobModel(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Subject');
+        Queue::push($job);
+
+        $queueJob = MockQueueJob::where('queue', 'default')->first();
+
+        $this->assertInstanceOf(MockQueueJob::class, $queueJob);
+        $this->assertEquals('default', $queueJob->queue);
+        $this->assertEquals(0, $queueJob->attempts);
+        $this->assertNull($queueJob->reserved_at);
+    }
+
+    public function testQueueJobReserve(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Subject');
+        Queue::push($job);
+
+        $queueJob = MockQueueJob::available('default')->first();
+        $this->assertNotNull($queueJob);
+
+        $reserved = $queueJob->reserve();
+        $this->assertTrue($reserved);
+        $this->assertEquals(1, $queueJob->attempts);
+        $this->assertNotNull($queueJob->reserved_at);
+    }
+
+    public function testQueueJobRelease(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Subject');
+        Queue::push($job);
+
+        $queueJob = MockQueueJob::available('default')->first();
+        $queueJob->reserve();
+
+        $released = $queueJob->release(60);
+        $this->assertTrue($released);
+        $this->assertNull($queueJob->reserved_at);
+        $this->assertGreaterThan(time(), $queueJob->available_at);
+    }
+
+    public function testFailedJobModel(): void
+    {
+        $failedJob = MockFailedJob::create([
+            'connection' => 'database',
+            'queue' => 'default',
+            'payload' => serialize(['test' => 'data']),
+            'exception' => 'Test exception',
+            'failed_at' => time(),
+        ]);
+
+        $this->assertInstanceOf(MockFailedJob::class, $failedJob);
+        $this->assertEquals('database', $failedJob->connection);
+        $this->assertEquals('default', $failedJob->queue);
+    }
 }
