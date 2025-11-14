@@ -2,15 +2,20 @@
 
 namespace Doppar\Queue\Tests\Unit;
 
-use Doppar\Queue\Tests\Mock\MockContainer;
 use Phaseolies\Support\UrlGenerator;
 use Phaseolies\Http\Request;
 use Phaseolies\Database\Database;
 use Phaseolies\DI\Container;
+use PHPUnit\Metadata\Test;
 use PHPUnit\Framework\TestCase;
 use PDO;
+use Doppar\Queue\Tests\Mock\TestQueueManager;
+use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
+use Doppar\Queue\Tests\Mock\MockContainer;
+use Doppar\Queue\Tests\Mock\Jobs\TestEmailJob;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
+use Doppar\Queue\Facades\Queue;
 
 class QueueSystemTest extends TestCase
 {
@@ -25,6 +30,7 @@ class QueueSystemTest extends TestCase
         $container->bind('request', fn() => new Request());
         $container->bind('url', fn() => UrlGenerator::class);
         $container->bind('db', fn() => new Database('default'));
+        $container->singleton('queue.worker', TestQueueManager::class);
 
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -108,5 +114,24 @@ class QueueSystemTest extends TestCase
         } catch (\ReflectionException $e) {
             $this->fail("Failed to set static property {$propertyName}: " . $e->getMessage());
         }
+    }
+
+    // =====================================================
+    // TEST JOB CREATION AND DISPATCHING
+    // =====================================================
+
+    public function testPushJobToQueue(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        $jobId = Queue::push($job);
+
+        $this->assertNotEmpty($jobId);
+        $this->assertStringStartsWith('job_', $jobId);
+
+        // Verify job is in database
+        $queueJob = MockQueueJob::where('queue', 'default')->first();
+        $this->assertNotNull($queueJob);
+        $this->assertEquals('default', $queueJob->queue);
+        $this->assertEquals(0, $queueJob->attempts);
     }
 }
