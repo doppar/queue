@@ -1,159 +1,34 @@
-create a example job:
-```php
-<?php
+<p align="center">
+    <a href="https://doppar.com" target="_blank">
+        <img src="https://raw.githubusercontent.com/doppar/doppar/7138fb0e72cd55256769be6947df3ac48c300700/public/logo.png" width="400">
+    </a>
+</p>
 
-namespace App\Jobs;
+<p align="center">
+<a href="https://github.com/doppar/queue/actions/workflows/tests.yml"><img src="https://github.com/doppar/queue/actions/workflows/tests.yml/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/doppar/queue"><img src="https://img.shields.io/packagist/dt/doppar/queue" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/doppar/queue"><img src="https://img.shields.io/packagist/v/doppar/queue" alt="Latest Stable Version"></a>
+<a href="https://github.com/doppar/queue/blob/main/LICENSE"><img src="https://img.shields.io/github/license/doppar/queue" alt="License"></a>
+</p>
 
-use Phaseolies\Support\Facades\Log;
-use Doppar\Queue\Job;
+## About Doppar Queue
 
-class SendEmailJob extends Job
-{
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 3;
+> **Note:** This repository contains the core code of the Doppar framework queue package. If you want to build an application using Doppar, visit the main [Doppar repository](https://github.com/doppar/doppar).
 
-    /**
-     * The number of seconds to wait before retrying.
-     *
-     * @var int
-     */
-    public $retryAfter = 60;
+Doppar queue system offers robust features including multiple queue support for organizing jobs by priority or category, automatic retry logic with configurable attempts and delays, and comprehensive failed job tracking for easier debugging. It supports delayed execution for scheduling jobs in the future, graceful shutdown handling to safely stop workers, and built-in memory management that automatically restarts workers when limits are exceeded.
 
-    /**
-     * The email data.
-     *
-     * @var array
-     */
-    protected $emailData;
+## Contributing
 
-    /**
-     * Create a new job instance.
-     *
-     * @param array $emailData
-     */
-    public function __construct(array $emailData)
-    {
-        $this->emailData = $emailData;
-    }
+Thank you for considering contributing to the Doppar framework! The contribution guide can be found in the [Doppar documentation](https://doppar.com/versions/3.x/contributions.html).
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle(): void
-    {
-        // Your email sending logic here
-        $to = $this->emailData['to'];
-        $subject = $this->emailData['subject'];
-        $message = $this->emailData['message'];
+## Code of Conduct
 
-        Log::info("Email sent successfully to {$to}");
-    }
+In order to ensure that the Doppar community is welcoming to all, please review and abide by the [Code of Conduct](https://doppar.com/versions/3.x/contributions.html#code-of-conduct).
 
-    /**
-     * Handle a job failure.
-     *
-     * @param \Throwable $exception
-     * @return void
-     */
-    public function failed(\Throwable $exception): void
-    {
-        // Send notification to admin about failed email
-        Log::error("Failed to send email after {$this->tries} attempts", [
-            'email_to' => $this->emailData['to'],
-            'exception' => $exception->getMessage(),
-        ]);
+## Security Vulnerabilities
 
-        // You could send a notification to admins here
-    }
-}
-```
+Please review [our security policy](https://github.com/doppar/framework/security/policy) on how to report security vulnerabilities.
 
-example controller
-```
-<?php
+## License
 
-namespace App\Http\Controllers;
-
-use Phaseolies\Utilities\Attributes\Route;
-use Doppar\Queue\Facades\Queue;
-use App\Jobs\SendEmailJob;
-use App\Http\Controllers\Controller;
-
-class QueueController extends Controller
-{
-    #[Route('queue')]
-    public function queue()
-    {
-        $job = new SendEmailJob([
-            'to' => 'user@example.com',
-            'subject' => 'Welcome!',
-            'message' => 'Thanks for signing up!',
-        ]);
-
-        $jobId = Queue::push($job);
-
-        echo "Job dispatched with ID: {$jobId}\n";
-
-        // with specific name
-        $job = new SendEmailJob([
-            'to' => 'user@example.com',
-            'subject' => 'Welcome!',
-            'message' => 'Thanks for signing up!',
-        ])->onQueue('emails')
-            ->delayFor(10);
-
-        // command will be [php pool queue:run --queue=emails]
-
-        $jobId = Queue::push($job);
-    }
-}
-```
-
-then add provider in your `config/app.php`
-```php
- \Doppar\Queue\QueueServiceProvider::class
-```
-
-Run
-```php
-php pool vendor:publish --provider="Doppar\Queue\QueueServiceProvider"
-// now migrate
-php pool migrate
-```
-
-Then run
-```bash
-php pool queue:run
-
-# Specify only the queue name
-php pool queue:run --queue=emails
-php pool queue:run --queue=notifications
-php pool queue:run --queue=reports
-
-# Change sleep time between jobs
-php pool queue:run --sleep=1
-php pool queue:run --sleep=5
-php pool queue:run --queue=emails --sleep=10
-
-# Adjust memory limit
-php pool queue:run --memory=256
-php pool queue:run --memory=512 --queue=emails
-php pool queue:run --memory=1024 --sleep=2
-
-# Adjust timeout (max execution time in seconds)
-php pool queue:run --timeout=600
-php pool queue:run --timeout=1800 --queue=emails
-php pool queue:run --timeout=7200 --memory=512
-
-# Combine all options (custom configuration)
-php pool queue:run --queue=emails --sleep=5 --memory=256 --timeout=900
-php pool queue:run --queue=notifications --sleep=3 --memory=512 --timeout=1800
-php pool queue:run --queue=reports --sleep=10 --memory=1024 --timeout=3600
-```
-
+The Doppar framework is open-sourced software licensed under the [MIT license](LICENSE.md).
