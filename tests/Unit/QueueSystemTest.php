@@ -228,4 +228,33 @@ class QueueSystemTest extends TestCase
         $this->assertNotNull($queueJob);
         $this->assertEquals('images', $queueJob->queue);
     }
+
+    // =====================================================
+    // TEST JOB EXECUTION
+    // =====================================================
+
+    public function testJobExecutionSuccess(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        Queue::push($job);
+
+        $queueJob = Queue::pop('default');
+        $this->assertNotNull($queueJob);
+
+        // Execute the job
+        $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+        $unserializedJob->handle();
+
+        // Job should have been executed
+        $this->assertEquals('test@example.com', $unserializedJob->to);
+        $this->assertEquals('Test Subject', $unserializedJob->subject);
+
+        // Delete job after successful execution
+        $deleted = Queue::delete($queueJob);
+        $this->assertTrue($deleted);
+
+        // Verify job is removed
+        $count = MockQueueJob::count();
+        $this->assertEquals(0, $count);
+    }
 }
