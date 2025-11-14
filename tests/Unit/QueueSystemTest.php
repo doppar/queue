@@ -134,4 +134,18 @@ class QueueSystemTest extends TestCase
         $this->assertEquals('default', $queueJob->queue);
         $this->assertEquals(0, $queueJob->attempts);
     }
+
+    public function testPushJobWithCustomQueue(): void
+    {
+        $job = new TestEmailJob('test@example.com', 'Test Subject');
+        $job->onQueue('emails');
+        $jobId = Queue::push($job);
+
+        $this->assertNotEmpty($jobId);
+
+        // Verify job is in correct queue
+        $queueJob = MockQueueJob::where('queue', 'emails')->first();
+        $this->assertNotNull($queueJob);
+        $this->assertEquals('emails', $queueJob->queue);
+    }
 }
