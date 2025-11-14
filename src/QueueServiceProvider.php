@@ -9,6 +9,7 @@ use Doppar\Queue\Commands\QueueRetryCommand;
 use Doppar\Queue\Commands\QueueFlushCommand;
 use Doppar\Queue\Commands\QueueFailedCommand;
 use Doppar\Queue\Commands\MakeJobCommand;
+use Doppar\Queue\Commands\QueueMonitorCommand;
 
 class QueueServiceProvider extends ServiceProvider
 {
@@ -40,7 +41,8 @@ class QueueServiceProvider extends ServiceProvider
             QueueRetryCommand::class,
             MakeJobCommand::class,
             QueueFlushCommand::class,
-            QueueFailedCommand::class
+            QueueFailedCommand::class,
+            QueueMonitorCommand::class
         ]);
     }
 }
