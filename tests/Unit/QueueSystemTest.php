@@ -13,10 +13,12 @@ use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
 use Doppar\Queue\Tests\Mock\Models\MockFailedJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
+use Doppar\Queue\Tests\Mock\Jobs\TestReportJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestJobWithFailedCallback;
 use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestFailingJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestEmailJob;
+use Doppar\Queue\Tests\Mock\Jobs\TestCounterJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestComplexDataJob;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
@@ -523,5 +525,102 @@ class QueueSystemTest extends TestCase
         $this->assertInstanceOf(MockFailedJob::class, $failedJob);
         $this->assertEquals('database', $failedJob->connection);
         $this->assertEquals('default', $failedJob->queue);
+    }
+
+    // =====================================================
+    // TEST WORKER BEHAVIOR
+    // =====================================================
+
+    public function testWorkerProcessSingleJob(): void
+    {
+        $job = new TestCounterJob();
+        Queue::push($job);
+
+        // Process one job
+        $queueJob = Queue::pop('default');
+        $this->assertNotNull($queueJob);
+
+        $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+        $unserializedJob->handle();
+
+        $this->assertEquals(1, $unserializedJob->counter);
+
+        // Delete job
+        Queue::delete($queueJob);
+
+        // Queue should be empty
+        $this->assertEquals(0, Queue::size('default'));
+    }
+
+    public function testWorkerMemoryCheck(): void
+    {
+        $this->worker->setMaxMemory(1); // 1MB limit
+
+        // This should return true since we're using more than 1MB
+        $reflection = new \ReflectionClass($this->worker);
+        $method = $reflection->getMethod('memoryExceeded');
+        $method->setAccessible(true);
+
+        $exceeded = $method->invoke($this->worker);
+        $this->assertTrue($exceeded);
+    }
+
+    // =====================================================
+    // TEST MULTIPLE QUEUES
+    // =====================================================
+
+    public function testMultipleQueues(): void
+    {
+        // Create jobs on different queues
+        $emailJob = new TestEmailJob('test@example.com', 'Subject');
+        $emailJob->onQueue('emails');
+        Queue::push($emailJob);
+
+        $imageJob = new TestImageJob('/path/to/image.jpg');
+        $imageJob->onQueue('images');
+        Queue::push($imageJob);
+
+        $reportJob = new TestReportJob('monthly');
+        $reportJob->onQueue('reports');
+        Queue::push($reportJob);
+
+        // Verify each queue has correct job
+        $this->assertEquals(1, Queue::size('emails'));
+        $this->assertEquals(1, Queue::size('images'));
+        $this->assertEquals(1, Queue::size('reports'));
+        $this->assertEquals(0, Queue::size('default'));
+    }
+
+    public function testJobWithZeroRetries(): void
+    {
+        $job = new TestFailingJob();
+        $job->tries = 0; // No retries
+        Queue::push($job);
+
+        $queueJob = Queue::pop('default');
+
+        try {
+            $unserializedJob = $this->manager->unserializeJob($queueJob->payload);
+            $unserializedJob->handle();
+        } catch (\Exception $e) {
+            // Should mark as failed immediately
+            Queue::markAsFailed($queueJob, $e);
+        }
+
+        $failedJob = MockFailedJob::first();
+        $this->assertNotNull($failedJob);
+    }
+
+    public function testJobIdGeneration(): void
+    {
+        $job1 = new TestEmailJob('test1@example.com', 'Subject 1');
+        $job2 = new TestEmailJob('test2@example.com', 'Subject 2');
+
+        $jobId1 = Queue::push($job1);
+        $jobId2 = Queue::push($job2);
+
+        $this->assertNotEquals($jobId1, $jobId2);
+        $this->assertStringStartsWith('job_', $jobId1);
+        $this->assertStringStartsWith('job_', $jobId2);
     }
 }
