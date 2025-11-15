@@ -7,6 +7,8 @@ use Doppar\Queue\Contracts\JobInterface;
 
 abstract class Job implements JobInterface
 {
+    use InteractsWithQueueableAttributes;
+
     /**
      * The number of times the job may be attempted.
      *
@@ -150,11 +152,19 @@ abstract class Job implements JobInterface
     /**
      * Dispatch the job to the queue.
      *
-     * @return string Job ID
+     * @return string|null
      */
-    public function dispatch(): string
+    public function dispatch(): ?string
     {
-        return Queue::push($this);
+        $this->applyQueueableAttributes();
+
+        if ($this->shouldQueue()) {
+            return Queue::push($this);
+        }
+
+        $this->handle();
+
+        return null;
     }
 
     /**
@@ -166,6 +176,8 @@ abstract class Job implements JobInterface
     public function dispatchAfter(int $delay): string
     {
         $this->delayFor($delay);
+
+        $this->applyQueueableAttributes();
 
         return $this->dispatch();
     }
@@ -179,6 +191,8 @@ abstract class Job implements JobInterface
     public function dispatchOn(string $queue): string
     {
         $this->onQueue($queue);
+
+        $this->applyQueueableAttributes();
 
         return $this->dispatch();
     }
@@ -194,5 +208,30 @@ abstract class Job implements JobInterface
         $job = new static(...$args);
 
         return $job->dispatch();
+    }
+
+    /**
+     * Dispatch the job synchronously
+     *
+     * @param mixed ...$args
+     * @return void
+     */
+    public static function dispatchSync(...$args): void
+    {
+        $job = new static(...$args);
+
+        $job->handle();
+    }
+
+    /**
+     * Force the job to be queued even without Queueable attribute.
+     *
+     * @return string Job ID
+     */
+    public function forceQueue(): string
+    {
+        $this->applyQueueableAttributes();
+
+        return Queue::push($this);
     }
 }
