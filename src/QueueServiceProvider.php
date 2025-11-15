@@ -2,6 +2,7 @@
 
 namespace Doppar\Queue;
 
+use Doppar\Queue\Commands\MakeJobCommand;
 use Phaseolies\Providers\ServiceProvider;
 use Doppar\Queue\QueueManager;
 use Doppar\Queue\Commands\QueueRunCommand;
@@ -40,7 +41,8 @@ class QueueServiceProvider extends ServiceProvider
             QueueRetryCommand::class,
             QueueFlushCommand::class,
             QueueFailedCommand::class,
-            QueueMonitorCommand::class
+            QueueMonitorCommand::class,
+            MakeJobCommand::class
         ]);
     }
 }
