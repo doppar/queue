@@ -7,6 +7,19 @@ use Doppar\Queue\Attributes\Queueable;
 trait InteractsWithQueueableAttributes
 {
     /**
+     * Check if the job should be queued based on the Queueable attribute.
+     *
+     * @return bool
+     */
+    public function shouldQueue(): bool
+    {
+        $reflection = new \ReflectionClass($this);
+        $attributes = $reflection->getAttributes(Queueable::class);
+
+        return !empty($attributes);
+    }
+
+    /**
      * Apply the Queueable attribute settings to the job.
      *
      * @return void

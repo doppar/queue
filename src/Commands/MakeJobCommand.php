@@ -77,9 +77,19 @@ class MakeJobCommand extends Command
 namespace {$namespace};
 
 use Doppar\Queue\Job;
+use Doppar\Queue\Dispatchable;
+// use Doppar\Queue\Attributes\Queueable;
 
+// #[Queueable(tries: 3, retryAfter: 60, delayFor: 300, onQueue: 'default')]
 class {$className} extends Job
 {
+    use Dispatchable;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct(){}
+
     /**
      * Execute the job.
      *

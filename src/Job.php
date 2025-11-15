@@ -4,7 +4,6 @@ namespace Doppar\Queue;
 
 use Doppar\Queue\Facades\Queue;
 use Doppar\Queue\Contracts\JobInterface;
-use Doppar\Queue\Attributes\Queueable;
 
 abstract class Job implements JobInterface
 {
@@ -148,19 +147,6 @@ abstract class Job implements JobInterface
         $this->jobDelay = $delay;
 
         return $this;
-    }
-
-    /**
-     * Check if the job should be queued based on the Queueable attribute.
-     *
-     * @return bool
-     */
-    public function shouldQueue(): bool
-    {
-        $reflection = new \ReflectionClass($this);
-        $attributes = $reflection->getAttributes(Queueable::class);
-
-        return !empty($attributes);
     }
 
     /**
