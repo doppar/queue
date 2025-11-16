@@ -38,7 +38,11 @@ class MakeJobCommand extends Command
             }
 
             $namespace = 'App\\Jobs' . (count($parts) > 0 ? '\\' . implode('\\', $parts) : '');
-            $filePath = base_path('app/Jobs/' . str_replace('/', DIRECTORY_SEPARATOR, $name) . '.php');
+            $parts[] = $className;
+
+            $filePath = base_path(
+                'app/Jobs/' . implode(DIRECTORY_SEPARATOR, $parts) . '.php'
+            );
 
             // Check if Job already exists
             if (file_exists($filePath)) {
