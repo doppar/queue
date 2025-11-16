@@ -8,6 +8,7 @@ use Doppar\Queue\Contracts\JobInterface;
 abstract class Job implements JobInterface
 {
     use InteractsWithQueueableAttributes;
+    use InteractsWithModelSerialization;
 
     /**
      * The number of times the job may be attempted.
