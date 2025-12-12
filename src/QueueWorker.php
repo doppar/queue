@@ -43,6 +43,20 @@ class QueueWorker
     protected $maxMemory = 128;
 
     /**
+     * The maximum number of jobs to process.
+     *
+     * @var int|null
+     */
+    protected $maxJobs = null;
+
+    /**
+     * The number of jobs processed.
+     *
+     * @var int
+     */
+    protected $jobsProcessed = 0;
+
+    /**
      * Callback to be executed **before** a job is processed.
      *
      * @var callable|null
@@ -109,6 +123,12 @@ class QueueWorker
                 break;
             }
 
+            // Check if max jobs limit reached
+            if ($this->maxJobsReached()) {
+                $this->stop(0, "Maximum job limit of {$this->maxJobs} reached");
+                break;
+            }
+
             // Check memory usage
             if ($this->memoryExceeded()) {
                 $this->stop(12, 'Memory limit exceeded');
@@ -143,6 +163,7 @@ class QueueWorker
             }
 
             $this->processJob($queueJob);
+            $this->jobsProcessed++;
         } catch (\Throwable $e) {
             $this->handleWorkerException($e);
             $this->sleep($this->sleep);
@@ -262,6 +283,16 @@ class QueueWorker
     }
 
     /**
+     * Determine if the maximum number of jobs has been reached.
+     *
+     * @return bool
+     */
+    protected function maxJobsReached(): bool
+    {
+        return !empty($this->maxJobs) && $this->jobsProcessed >= $this->maxJobs;
+    }
+
+    /**
      * Stop the worker.
      *
      * @param int $status
@@ -352,6 +383,8 @@ class QueueWorker
         if (isset($options['maxExecutionTime'])) {
             $this->maxExecutionTime = (int) $options['maxExecutionTime'];
         }
+
+        $this->maxJobs = $options['maxJobs'] ?? null;
     }
 
     /**
@@ -407,5 +440,26 @@ class QueueWorker
     public function setMaxExecutionTime(int $seconds): void
     {
         $this->maxExecutionTime = $seconds;
+    }
+
+    /**
+     * Set the maximum number of jobs to process.
+     *
+     * @param int|null $maxJobs
+     * @return void
+     */
+    public function setMaxJobs(?int $maxJobs): void
+    {
+        $this->maxJobs = $maxJobs;
+    }
+
+    /**
+     * Get the number of jobs processed.
+     *
+     * @return int
+     */
+    public function getJobsProcessed(): int
+    {
+        return $this->jobsProcessed;
     }
 }
