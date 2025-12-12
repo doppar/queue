@@ -289,7 +289,7 @@ class QueueWorker
      */
     protected function maxJobsReached(): bool
     {
-        return $this->maxJobs !== null && $this->jobsProcessed >= $this->maxJobs;
+        return !empty($this->maxJobs) && $this->jobsProcessed >= $this->maxJobs;
     }
 
     /**
@@ -384,9 +384,7 @@ class QueueWorker
             $this->maxExecutionTime = (int) $options['maxExecutionTime'];
         }
 
-        if (isset($options['maxJobs'])) {
-            $this->maxJobs = (int) $options['maxJobs'];
-        }
+        $this->maxJobs = $options['maxJobs'] ?? null;
     }
 
     /**
