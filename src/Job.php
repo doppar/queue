@@ -310,7 +310,7 @@ abstract class Job implements JobInterface
      */
     public static function withChain(array $jobs): Drain
     {
-        return Drain::create($jobs);
+        return Drain::conduct($jobs);
     }
 
     /**
