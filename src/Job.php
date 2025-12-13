@@ -351,6 +351,9 @@ abstract class Job implements JobInterface
         // Get the next job
         $nextJob = $this->chainJobs[$nextIndex];
 
+        // Apply queueable attributes to the next job
+        $nextJob->applyQueueableAttributes();
+
         // Attach chain context to next job
         $nextJob->chainId = $this->chainId;
         $nextJob->chainJobs = $this->chainJobs;
