@@ -61,4 +61,11 @@ interface JobInterface
      * @return void
      */
     public function setJobId(string $id): void;
+
+    /**
+     * Get the timeout in seconds.
+     *
+     * @return int|null
+     */
+    public function getTimeout(): ?int;
 }
