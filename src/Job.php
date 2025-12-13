@@ -292,24 +292,24 @@ abstract class Job implements JobInterface
      * Chain jobs to run after this job completes.
      *
      * @param array<JobInterface> $jobs
-     * @return Conductor
+     * @return Drain
      */
-    public function chain(array $jobs): Conductor
+    public function chain(array $jobs): Drain
     {
         array_unshift($jobs, $this);
 
-        return new Conductor($jobs);
+        return new Drain($jobs);
     }
 
     /**
      * Create a job chain starting with this job.
      *
      * @param array<JobInterface> $jobs
-     * @return Conductor
+     * @return Drain
      */
-    public static function withChain(array $jobs): Conductor
+    public static function withChain(array $jobs): Drain
     {
-        return Conductor::create($jobs);
+        return Drain::create($jobs);
     }
 
     /**

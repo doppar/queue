@@ -4,7 +4,7 @@ namespace Doppar\Queue;
 
 use Doppar\Queue\Contracts\JobInterface;
 
-class Conductor
+class Drain
 {
     /**
      * The jobs in the chain.
@@ -65,7 +65,7 @@ class Conductor
      * @param array<JobInterface> $jobs
      * @return static
      */
-    public static function create(array $jobs): static
+    public static function conduct(array $jobs): static
     {
         return new static($jobs);
     }
