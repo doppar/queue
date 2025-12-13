@@ -194,6 +194,11 @@ class QueueWorker
             // Delete the job from queue if successful
             $this->manager->delete($queueJob);
 
+            // Dispatch next job in chain if this job is chained
+            if ($job->isChained()) {
+                $job->dispatchNextChainJob();
+            }
+
             // Trigger onJobProcessed callback
             if (is_callable($this->onJobProcessed)) {
                 ($this->onJobProcessed)($job);
@@ -277,6 +282,11 @@ class QueueWorker
                 // Could not unserialize job, mark as failed immediately
                 $this->manager->markAsFailed($queueJob, $exception);
                 return;
+            }
+
+            // Handle chain failure - chain stops here
+            if ($job->isChained()) {
+                $job->handleChainFailure($exception);
             }
 
             // Check if job should be retried

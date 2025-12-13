@@ -60,6 +60,41 @@ abstract class Job implements JobInterface
     public $timeout = null;
 
     /**
+     * Chain identifier (if this job is part of a chain).
+     *
+     * @var string|null
+     */
+    public $chainId = null;
+
+    /**
+     * All jobs in the chain.
+     *
+     * @var array<JobInterface>|null
+     */
+    public $chainJobs = null;
+
+    /**
+     * Current position in the chain.
+     *
+     * @var int|null
+     */
+    public $chainIndex = null;
+
+    /**
+     * Chain completion callback.
+     *
+     * @var callable|null
+     */
+    public $chainOnComplete = null;
+
+    /**
+     * Chain failure callback.
+     *
+     * @var callable|null
+     */
+    public $chainOnFailure = null;
+
+    /**
      * Get the number of times the job may be attempted.
      *
      * @return int
@@ -251,5 +286,93 @@ abstract class Job implements JobInterface
         $this->applyQueueableAttributes();
 
         return Queue::push($this);
+    }
+
+    /**
+     * Chain jobs to run after this job completes.
+     *
+     * @param array<JobInterface> $jobs
+     * @return Conductor
+     */
+    public function chain(array $jobs): Conductor
+    {
+        array_unshift($jobs, $this);
+
+        return new Conductor($jobs);
+    }
+
+    /**
+     * Create a job chain starting with this job.
+     *
+     * @param array<JobInterface> $jobs
+     * @return Conductor
+     */
+    public static function withChain(array $jobs): Conductor
+    {
+        return Conductor::create($jobs);
+    }
+
+    /**
+     * Check if this job is part of a chain.
+     *
+     * @return bool
+     */
+    public function isChained(): bool
+    {
+        return $this->chainId !== null && $this->chainJobs !== null;
+    }
+
+    /**
+     * Dispatch the next job in the chain.
+     *
+     * @return void
+     */
+    public function dispatchNextChainJob(): void
+    {
+        if (!$this->isChained()) {
+            return;
+        }
+
+        $nextIndex = $this->chainIndex + 1;
+
+        // Check if there are more jobs in the chain
+        if ($nextIndex >= count($this->chainJobs)) {
+            // Chain completed successfully
+            if ($this->chainOnComplete) {
+                ($this->chainOnComplete)();
+            }
+            return;
+        }
+
+        // Get the next job
+        $nextJob = $this->chainJobs[$nextIndex];
+
+        // Attach chain context to next job
+        $nextJob->chainId = $this->chainId;
+        $nextJob->chainJobs = $this->chainJobs;
+        $nextJob->chainIndex = $nextIndex;
+        $nextJob->chainOnComplete = $this->chainOnComplete;
+        $nextJob->chainOnFailure = $this->chainOnFailure;
+        $nextJob->queueName = $this->queueName;
+
+        // Push the next job to queue
+        Queue::push($nextJob);
+    }
+
+    /**
+     * Handle chain failure.
+     *
+     * @param \Throwable $exception
+     * @return void
+     */
+    public function handleChainFailure(\Throwable $exception): void
+    {
+        if (!$this->isChained()) {
+            return;
+        }
+
+        if ($this->chainOnFailure) {
+            ($this->chainOnFailure)($this, $exception, $this->chainIndex);
+        }
     }
 }
