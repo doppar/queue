@@ -3,6 +3,8 @@
 namespace Doppar\Queue;
 
 use Doppar\Queue\Contracts\JobInterface;
+use function Opis\Closure\serialize as serialize_closure;
+use function Opis\Closure\unserialize as unserialize_closure;
 
 class Drain
 {
@@ -117,6 +119,10 @@ class Drain
      */
     public function then(callable $callback): self
     {
+        if ($callback instanceof \Closure) {
+            $callback = serialize_closure($callback);
+        }
+
         $this->onComplete = $callback;
 
         return $this;
@@ -130,6 +136,10 @@ class Drain
      */
     public function catch(callable $callback): self
     {
+        if ($callback instanceof \Closure) {
+            $callback = serialize_closure($callback);
+        }
+
         $this->onFailure = $callback;
 
         return $this;
@@ -181,14 +191,22 @@ class Drain
                 $job->handle();
             } catch (\Throwable $e) {
                 if ($this->onFailure) {
-                    ($this->onFailure)($job, $e, $index);
+                    $callback = is_string($this->onFailure)
+                        ? unserialize_closure($this->onFailure)
+                        : $this->onFailure;
+
+                    $callback($job, $e, $index);
                 }
                 throw $e;
             }
         }
 
         if ($this->onComplete) {
-            ($this->onComplete)();
+            $callback = is_string($this->onComplete)
+                ? unserialize_closure($this->onComplete)
+                : $this->onComplete;
+
+            $callback();
         }
     }
 

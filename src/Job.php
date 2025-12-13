@@ -4,6 +4,7 @@ namespace Doppar\Queue;
 
 use Doppar\Queue\Facades\Queue;
 use Doppar\Queue\Contracts\JobInterface;
+use function Opis\Closure\{serialize, unserialize};
 
 abstract class Job implements JobInterface
 {
@@ -339,7 +340,10 @@ abstract class Job implements JobInterface
         if ($nextIndex >= count($this->chainJobs)) {
             // Chain completed successfully
             if ($this->chainOnComplete) {
-                ($this->chainOnComplete)();
+                $callback = $this->unserializeCallback($this->chainOnComplete);
+                if (is_callable($callback)) {
+                    $callback();
+                }
             }
             return;
         }
@@ -372,7 +376,25 @@ abstract class Job implements JobInterface
         }
 
         if ($this->chainOnFailure) {
-            ($this->chainOnFailure)($this, $exception, $this->chainIndex);
+            $callback = $this->unserializeCallback($this->chainOnFailure);
+            if (is_callable($callback)) {
+                $callback($this, $exception, $this->chainIndex);
+            }
         }
+    }
+
+    /**
+     * Unserialize chain callback if it's a serialized closure.
+     *
+     * @param mixed $callback
+     * @return callable|null
+     */
+    protected function unserializeCallback($callback): ?callable
+    {
+        if (is_string($callback) && str_contains($callback, '"Opis\Closure\Box":')) {
+            return unserialize($callback);
+        }
+
+        return $callback;
     }
 }
