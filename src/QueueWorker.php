@@ -3,6 +3,7 @@
 namespace Doppar\Queue;
 
 use Doppar\Queue\Models\QueueJob;
+use Doppar\Queue\Exceptions\JobTimeoutException;
 use Doppar\Queue\Contracts\JobInterface;
 
 class QueueWorker
@@ -187,8 +188,8 @@ class QueueWorker
                 ($this->onJobProcessing)($job);
             }
 
-            // Execute the job
-            $this->executeJob($job);
+            // Execute the job with timeout
+            $this->executeJobWithTimeout($job);
 
             // Delete the job from queue if successful
             $this->manager->delete($queueJob);
@@ -199,6 +200,47 @@ class QueueWorker
             }
         } catch (\Throwable $e) {
             $this->handleJobException($queueJob, $job ?? null, $e);
+        }
+    }
+
+    /**
+     * Execute a job with timeout protection.
+     *
+     * @param JobInterface $job
+     * @return void
+     * @throws \Throwable
+     */
+    protected function executeJobWithTimeout(JobInterface $job): void
+    {
+        $timeout = $job->getTimeout();
+
+        if ($timeout === null || !extension_loaded('pcntl')) {
+            // No timeout or pcntl not available, execute normally
+            $this->executeJob($job);
+            return;
+        }
+
+        // Set up timeout handler
+        $timedOut = false;
+
+        pcntl_signal(SIGALRM, function () use (&$timedOut) {
+            $timedOut = true;
+        });
+
+        pcntl_alarm($timeout);
+
+        try {
+            $this->executeJob($job);
+            pcntl_alarm(0);
+        } catch (\Throwable $e) {
+            pcntl_alarm(0);
+            throw $e;
+        }
+
+        if ($timedOut) {
+            throw new JobTimeoutException(
+                "Job exceeded maximum execution time of {$timeout} seconds"
+            );
         }
     }
 

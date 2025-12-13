@@ -53,6 +53,13 @@ abstract class Job implements JobInterface
     public $attempts = 0;
 
     /**
+     * Maximum execution time in seconds.
+     *
+     * @var int|null
+     */
+    public $timeout = null;
+
+    /**
      * Get the number of times the job may be attempted.
      *
      * @return int
@@ -148,6 +155,16 @@ abstract class Job implements JobInterface
         $this->jobDelay = $delay;
 
         return $this;
+    }
+
+    /**
+     * Get the timeout in seconds.
+     *
+     * @return int|null
+     */
+    public function getTimeout(): ?int
+    {
+        return $this->timeout;
     }
 
     /**

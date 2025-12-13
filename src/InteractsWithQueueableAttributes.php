@@ -47,6 +47,10 @@ trait InteractsWithQueueableAttributes
             if ($attribute->onQueue !== null) {
                 $this->queueName = $attribute->onQueue;
             }
+
+            if ($attribute->timeout !== null) {
+                $this->timeout = $attribute->timeout;
+            }
         }
     }
 }
