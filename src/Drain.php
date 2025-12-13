@@ -104,7 +104,7 @@ class Drain
      * @param int $seconds
      * @return $this
      */
-    public function delay(int $seconds): self
+    public function delayFor(int $seconds): self
     {
         $this->delay = $seconds;
 

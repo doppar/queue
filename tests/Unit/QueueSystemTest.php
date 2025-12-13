@@ -900,7 +900,7 @@ class QueueSystemTest extends TestCase
             new TestChainJobA(),
             new TestChainJobB(),
         ])
-        ->delay($delay)
+        ->delayFor($delay)
         ->dispatch();
 
         $afterTime = time();
@@ -1142,7 +1142,7 @@ class QueueSystemTest extends TestCase
             new TestChainJobA(),
             new TestChainJobB(),
         ])
-        ->delay($delay)
+        ->delayFor($delay)
         ->dispatch();
 
         $afterTime = time();
