@@ -42,5 +42,7 @@
         "sort-packages": true
     },
     "minimum-stability": "dev",
-    "require": {}
+    "require": {
+        "opis/closure": "^4.4"
+    }
 }

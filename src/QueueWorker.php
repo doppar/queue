@@ -73,6 +73,13 @@ class QueueWorker
     protected $onJobProcessed;
 
     /**
+     * Flag to indicate if we're inside a forked timeout context.
+     *
+     * @var bool
+     */
+    protected $insideTimeoutContext = false;
+
+    /**
      * Create a new queue worker.
      *
      * @param QueueManager $manager
@@ -194,6 +201,11 @@ class QueueWorker
             // Delete the job from queue if successful
             $this->manager->delete($queueJob);
 
+            // Dispatch next job in chain if this job is chained
+            if ($job->isChained()) {
+                $job->dispatchNextChainJob();
+            }
+
             // Trigger onJobProcessed callback
             if (is_callable($this->onJobProcessed)) {
                 ($this->onJobProcessed)($job);
@@ -204,7 +216,7 @@ class QueueWorker
     }
 
     /**
-     * Execute a job with timeout protection.
+     * Execute a job with timeout protection using process forking.
      *
      * @param JobInterface $job
      * @return void
@@ -214,33 +226,100 @@ class QueueWorker
     {
         $timeout = $job->getTimeout();
 
-        if ($timeout === null || !extension_loaded('pcntl')) {
-            // No timeout or pcntl not available, execute normally
+        // No timeout or PCNTL not available
+        if ($timeout === null || !extension_loaded('pcntl') || !function_exists('pcntl_fork')) {
             $this->executeJob($job);
             return;
         }
 
-        // Set up timeout handler
-        $timedOut = false;
+        // Clean up database connections before forking
+        db()->cleanupAllConnections();
 
-        pcntl_signal(SIGALRM, function () use (&$timedOut) {
-            $timedOut = true;
-        });
+        $this->insideTimeoutContext = true;
+        $pid = pcntl_fork();
 
-        pcntl_alarm($timeout);
-
-        try {
+        if ($pid === -1) {
+            $this->insideTimeoutContext = false;
+            $this->logError("Failed to fork process, executing without timeout");
             $this->executeJob($job);
-            pcntl_alarm(0);
-        } catch (\Throwable $e) {
-            pcntl_alarm(0);
-            throw $e;
+            return;
         }
 
-        if ($timedOut) {
-            throw new JobTimeoutException(
-                "Job exceeded maximum execution time of {$timeout} seconds"
-            );
+        if ($pid === 0) {
+            // CHILD PROCESS
+            pcntl_signal(SIGTERM, SIG_DFL);
+            pcntl_signal(SIGINT, SIG_DFL);
+
+            try {
+                // Create new database connection in child
+                db()->cleanupAllConnections();
+                $this->executeJob($job);
+                exit(0);
+            } catch (\Throwable $e) {
+                error("Job exception: " . $e->getMessage());
+                exit(1);
+            }
+        }
+
+        // PARENT PROCESS
+        $startTime = time();
+        $timedOut = false;
+
+        while (true) {
+            $status = null;
+            $result = pcntl_waitpid($pid, $status, WNOHANG);
+
+            if ($result === $pid) {
+                $this->insideTimeoutContext = false;
+
+                // Clean up parent's connections too
+                db()->cleanupAllConnections();
+
+                if (pcntl_wifexited($status)) {
+                    $exitCode = pcntl_wexitstatus($status);
+
+                    if ($exitCode === 0) {
+                        return;
+                    }
+
+                    throw new \RuntimeException("Job process exited with code {$exitCode}");
+                }
+
+                if (pcntl_wifsignaled($status)) {
+                    $signal = pcntl_wtermsig($status);
+
+                    if ($timedOut) {
+                        throw new JobTimeoutException(
+                            "Job exceeded maximum execution time of {$timeout} seconds"
+                        );
+                    }
+
+                    throw new \RuntimeException("Job process was terminated by signal {$signal}");
+                }
+
+                return;
+            }
+
+            // Check timeout
+            if ((time() - $startTime) >= $timeout) {
+                $timedOut = true;
+                $this->logError("Job timeout exceeded ({$timeout}s), killing process {$pid}");
+
+                // Kill the process
+                posix_kill($pid, SIGKILL);
+                pcntl_waitpid($pid, $status);
+
+                // Clean up connections
+                $this->insideTimeoutContext = false;
+                db()->cleanupAllConnections();
+
+                throw new JobTimeoutException(
+                    "Job exceeded maximum execution time of {$timeout} seconds"
+                );
+            }
+
+            // 100ms
+            usleep(100000);
         }
     }
 
@@ -253,11 +332,7 @@ class QueueWorker
      */
     protected function executeJob(JobInterface $job): void
     {
-        try {
-            $job->handle();
-        } catch (\Throwable $e) {
-            throw $e;
-        }
+        $job->handle();
     }
 
     /**
@@ -279,12 +354,22 @@ class QueueWorker
                 return;
             }
 
+            // Handle chain failure - chain stops here
+            if ($job->isChained()) {
+                $job->handleChainFailure($exception);
+            }
+
             // Check if job should be retried
             if ($queueJob->attempts < $job->tries()) {
                 // Release the job back to the queue with delay
                 $delay = $job->retryAfter();
-                $this->manager->release($queueJob, $delay);
-                $this->logInfo("Job {$job->getJobId()} released back to queue (attempt {$queueJob->attempts}/{$job->tries()})");
+                $released = $this->manager->release($queueJob, $delay);
+
+                if ($released) {
+                    $this->logInfo("Job {$job->getJobId()} released back to queue (attempt {$queueJob->attempts}/{$job->tries()})");
+                } else {
+                    $this->logError("Failed to release job {$job->getJobId()} back to queue");
+                }
             } else {
                 // Max attempts reached, mark as failed
                 $this->manager->markAsFailed($queueJob, $exception);
@@ -393,17 +478,25 @@ class QueueWorker
      */
     protected function registerSignalHandlers(): void
     {
-        if (extension_loaded('pcntl')) {
-            pcntl_async_signals(true);
-
-            pcntl_signal(SIGTERM, function () {
-                $this->stop(0, 'Received SIGTERM signal');
-            });
-
-            pcntl_signal(SIGINT, function () {
-                $this->stop(0, 'Received SIGINT signal');
-            });
+        if (!extension_loaded('pcntl')) {
+            return;
         }
+
+        pcntl_async_signals(true);
+
+        // SIGTERM handler - only trigger if not in timeout context
+        pcntl_signal(SIGTERM, function () {
+            if (!$this->insideTimeoutContext) {
+                $this->stop(0, 'Received SIGTERM signal');
+            }
+        });
+
+        // SIGINT handler - only trigger if not in timeout context
+        pcntl_signal(SIGINT, function () {
+            if (!$this->insideTimeoutContext) {
+                $this->stop(0, 'Received SIGINT signal');
+            }
+        });
     }
 
     /**
