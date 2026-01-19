@@ -16,7 +16,7 @@
     "require-dev": {
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^12.1.5",
-        "doppar/framework": "^3.0"
+        "doppar/framework": "^3.*"
     },
     "autoload": {
         "psr-4": {
