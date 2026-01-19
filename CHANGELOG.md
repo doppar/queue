@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.1.1 - 2026-01-19
+
+### What's Changed
+
+* composer.json updated by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/21
+* composer.json updated by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/22
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.1.0...v1.1.1
+
 ## v1.1.0 - 2025-12-14
 
 ### What's Changed
