@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.2.0 - 2026-01-22
+
+### What's Changed
+
+* default queue worker timeout 3600 seconds to unlimited by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/23
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.1.1...v1.2.0
+
 ## v1.1.1 - 2026-01-19
 
 ### What's Changed
