@@ -27,7 +27,7 @@ class QueueWorker
      *
      * @var int
      */
-    protected $maxExecutionTime = 3600;
+    protected $maxExecutionTime = 0;
 
     /**
      * The number of seconds to wait before polling the queue.
@@ -453,6 +453,10 @@ class QueueWorker
      */
     protected function timeExceeded(int $startTime): bool
     {
+        if ($this->maxExecutionTime <= 0) {
+            return false;
+        }
+
         return (time() - $startTime) >= $this->maxExecutionTime;
     }
 
