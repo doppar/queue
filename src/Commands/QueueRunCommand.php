@@ -13,7 +13,7 @@ class QueueRunCommand extends Command
      *
      * @var string
      */
-    protected $name = 'queue:run {--queue=default} {--sleep=3} {--memory=128} {--timeout=3600} {--limit=}';
+    protected $name = 'queue:run {--queue=default} {--sleep=3} {--memory=128} {--timeout=0} {--limit=}';
 
     /**
      * The command description.
@@ -50,7 +50,7 @@ class QueueRunCommand extends Command
 
     /**
      * Execute the console command.
-     * Example: php pool queue:run --queue=reports --sleep=10 --memory=1024 --timeout=3600 --limit=
+     * Example: php pool queue:run --queue=reports --sleep=10 --memory=1024 --timeout=0 --limit=
      *
      * @return int
      */
@@ -60,13 +60,21 @@ class QueueRunCommand extends Command
             $queue = $this->option('queue', 'default');
             $sleep = (int) $this->option('sleep', 3);
             $maxMemory = (int) $this->option('memory', 128);
-            $maxTime = (int) $this->option('timeout', 3600);
-            $maxLimit = $this->option('limit');
 
+            $maxTimeInput = $this->option('timeout');
+            $maxTime = $maxTimeInput !== 0 ? (int) $maxTimeInput : -1;
+
+            $maxLimit = $this->option('limit');
             $maxLimit = $maxLimit !== null ? (int) $maxLimit : null;
 
             $this->displaySuccess("Starting queue worker on queue: {$queue}");
-            $configInfo = "Configuration: sleep={$sleep}s, memory={$maxMemory}MB, timeout={$maxTime}s";
+            $configInfo = "Configuration: sleep={$sleep}s, memory={$maxMemory}MB, timeout=";
+
+            if ($maxTime > 0) {
+                $configInfo .= "{$maxTime}s";
+            } else {
+                $configInfo .= "unlimited";
+            }
 
             if (!empty($maxLimit)) {
                 $configInfo .= ", limit={$maxLimit} jobs";
