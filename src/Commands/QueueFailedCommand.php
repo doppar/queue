@@ -3,7 +3,6 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
-use Doppar\Queue\QueueManager;
 use Doppar\Queue\Models\FailedJob;
 
 class QueueFailedCommand extends Command
@@ -28,7 +27,7 @@ class QueueFailedCommand extends Command
      *
      * @return int
      */
-    protected function handle(): int
+    public function handle(): int
     {
         $failedJobs = FailedJob::orderBy('failed_at', 'desc')->get();
 

@@ -54,7 +54,7 @@ class QueueRunCommand extends Command
      *
      * @return int
      */
-    protected function handle(): int
+    public function handle(): int
     {
         return $this->withTiming(function () {
             $queue = $this->option('queue', 'default');

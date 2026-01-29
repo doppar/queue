@@ -3,7 +3,6 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
-use Doppar\Queue\QueueManager;
 use Doppar\Queue\Models\FailedJob;
 
 class QueueFlushCommand extends Command
@@ -28,7 +27,7 @@ class QueueFlushCommand extends Command
      *
      * @return int
      */
-    protected function handle(): int
+    public function handle(): int
     {
         $id = $this->option('id');
 

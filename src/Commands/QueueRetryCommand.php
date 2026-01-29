@@ -28,7 +28,7 @@ class QueueRetryCommand extends Command
      *
      * @return int
      */
-    protected function handle(): int
+    public function handle(): int
     {
         $id = $this->option('id');
         $manager = app(QueueManager::class);
