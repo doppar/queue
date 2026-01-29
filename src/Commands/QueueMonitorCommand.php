@@ -27,7 +27,7 @@ class QueueMonitorCommand extends Command
      *
      * @return int
      */
-    protected function handle(): int
+    public function handle(): int
     {
         $queues = QueueJob::groupBy('queue')->pluck('queue');
 
