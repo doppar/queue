@@ -3,6 +3,7 @@
 namespace Doppar\Queue;
 
 use Doppar\Queue\Commands\MakeJobCommand;
+use Phaseolies\Providers\GhostableProvider;
 use Phaseolies\Providers\ServiceProvider;
 use Doppar\Queue\QueueManager;
 use Doppar\Queue\Commands\QueueRunCommand;
@@ -11,7 +12,7 @@ use Doppar\Queue\Commands\QueueFlushCommand;
 use Doppar\Queue\Commands\QueueFailedCommand;
 use Doppar\Queue\Commands\QueueMonitorCommand;
 
-class QueueServiceProvider extends ServiceProvider
+class QueueServiceProvider extends ServiceProvider implements GhostableProvider
 {
     /**
      * Register any application services.
@@ -44,5 +45,17 @@ class QueueServiceProvider extends ServiceProvider
             QueueMonitorCommand::class,
             MakeJobCommand::class
         ]);
+    }
+
+    /**
+     * Get the services that should ghost-load this provider.
+     *
+     * @return array<int, string>
+     */
+    public function ghosts(): array
+    {
+        return [
+            'queue.worker',
+        ];
     }
 }
