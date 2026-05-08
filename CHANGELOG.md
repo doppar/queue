@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.2.2 - 2026-05-08
+
+### What's Changed
+
+* Made QueueServiceProvider ghostable by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/25
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.2.1...v1.2.2
+
 ## v1.2.1 - 2026-01-29
 
 ### What's Changed
