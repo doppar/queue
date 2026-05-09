@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.2.3 - 2026-05-09
+
+### What's Changed
+
+* Fix: Normalize console generator paths across cross platform by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/26
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.2.2...v1.2.3
+
 ## v1.2.2 - 2026-05-08
 
 ### What's Changed
