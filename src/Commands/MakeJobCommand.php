@@ -28,9 +28,7 @@ class MakeJobCommand extends Command
     public function handle(): int
     {
         return $this->executeWithTiming(function () {
-            $name = $this->argument('name');
-            $parts = explode('/', $name);
-            $className = array_pop($parts);
+            [$name, $parts, $className] = $this->splitGeneratedName((string) $this->argument('name'));
 
             // Ensure class name ends with Job
             if (!str_ends_with($className, 'Job')) {
@@ -38,16 +36,13 @@ class MakeJobCommand extends Command
             }
 
             $namespace = 'App\\Jobs' . (count($parts) > 0 ? '\\' . implode('\\', $parts) : '');
-            $parts[] = $className;
-
-            $filePath = base_path(
-                'app/Jobs/' . implode(DIRECTORY_SEPARATOR, $parts) . '.php'
-            );
+            $fileName = count($parts) > 0 ? implode('/', $parts) . '/' . $className : $className;
+            $filePath = $this->generatedFilePath('app/Jobs', $fileName);
 
             // Check if Job already exists
             if (file_exists($filePath)) {
                 $this->displayError('Job already exists at:');
-                $this->line('<fg=white>' . str_replace(base_path(), '', $filePath) . '</>');
+                $this->line('<fg=white>' . $this->relativePath($filePath) . '</>');
                 return Command::FAILURE;
             }
 
@@ -62,7 +57,7 @@ class MakeJobCommand extends Command
             file_put_contents($filePath, $content);
 
             $this->displaySuccess('Job created successfully');
-            $this->line('<fg=yellow>📦 File:</> <fg=white>' . str_replace(base_path(), '', $filePath) . '</>');
+            $this->line('<fg=yellow>📦 File:</> <fg=white>' . $this->relativePath($filePath) . '</>');
             $this->newLine();
             $this->line('<fg=yellow>⚙️  Class:</> <fg=white>' . $className . '</>');
 
