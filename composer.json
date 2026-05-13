@@ -29,9 +29,6 @@
         }
     },
     "extra": {
-        "branch-alias": {
-            "dev-master": "1.x-dev"
-        },
         "doppar": {
             "providers": [
                 "Doppar\\Queue\\QueueServiceProvider"
@@ -44,5 +41,6 @@
     "minimum-stability": "dev",
     "require": {
         "opis/closure": "^4.4"
-    }
+    },
+    "prefer-stable": true
 }
