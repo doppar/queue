@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.2.4 - 2026-05-13
+
+### What's Changed
+
+* update composer.json: add prefer stable true by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/27
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.2.3...v1.2.4
+
 ## v1.2.3 - 2026-05-09
 
 ### What's Changed
