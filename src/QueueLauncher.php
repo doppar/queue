@@ -3,8 +3,8 @@
 namespace Doppar\Queue;
 
 use Doppar\Queue\Commands\MakeJobCommand;
-use Phaseolies\Providers\GhostableProvider;
-use Phaseolies\Providers\ServiceProvider;
+use Phaseolies\Launchers\GhostableLauncher;
+use Phaseolies\Launchers\ServiceLauncher;
 use Doppar\Queue\QueueManager;
 use Doppar\Queue\Commands\QueueRunCommand;
 use Doppar\Queue\Commands\QueueRetryCommand;
@@ -12,7 +12,7 @@ use Doppar\Queue\Commands\QueueFlushCommand;
 use Doppar\Queue\Commands\QueueFailedCommand;
 use Doppar\Queue\Commands\QueueMonitorCommand;
 
-class QueueServiceProvider extends ServiceProvider implements GhostableProvider
+class QueueLauncher extends ServiceLauncher implements GhostableLauncher
 {
     /**
      * Register any application services.
@@ -29,12 +29,12 @@ class QueueServiceProvider extends ServiceProvider implements GhostableProvider
      *
      * @return void
      */
-    public function boot(): void
+    public function launch(): void
     {
         $this->loadMigrations(__DIR__ . '/database/migrations');
 
         $this->publishes([
-            __DIR__ . '/database/migrations' => database_path('migrations'),
+            __DIR__ . '/database/migrations' => schema_path('migrations'),
         ], 'migrations');
 
         $this->commands([

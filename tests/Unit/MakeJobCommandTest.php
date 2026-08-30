@@ -86,7 +86,7 @@ class MakeJobCommandTest extends TestCase
         };
 
         $result = $command->handle();
-        $file = $this->tempRoot . '/app/Jobs/Reports/GenerateDailyJob.php';
+        $file = $this->tempRoot . '/src/Jobs/Reports/GenerateDailyJob.php';
         $contents = (string) file_get_contents($file);
 
         $this->assertSame(0, $result);
@@ -95,7 +95,7 @@ class MakeJobCommandTest extends TestCase
         $this->assertStringContainsString('class GenerateDailyJob extends Job', $contents);
         $this->assertContains('Job created successfully', $command->capturedSuccesses);
         $this->assertContains(
-            '<fg=yellow>📦 File:</> <fg=white>app/Jobs/Reports/GenerateDailyJob.php</>',
+            '<fg=yellow>📦 File:</> <fg=white>src/Jobs/Reports/GenerateDailyJob.php</>',
             $command->capturedLines
         );
     }
