@@ -37,7 +37,7 @@ class MakeJobCommand extends Command
 
             $namespace = 'App\\Jobs' . (count($parts) > 0 ? '\\' . implode('\\', $parts) : '');
             $fileName = count($parts) > 0 ? implode('/', $parts) . '/' . $className : $className;
-            $filePath = $this->generatedFilePath('app/Jobs', $fileName);
+            $filePath = $this->generatedFilePath('src/Jobs', $fileName);
 
             // Check if Job already exists
             if (file_exists($filePath)) {

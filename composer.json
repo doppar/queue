@@ -15,8 +15,8 @@
     ],
     "require-dev": {
         "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^12.1.5",
-        "doppar/framework": "3.*"
+        "phpunit/phpunit": "^13.3",
+        "doppar/framework": "4.*"
     },
     "autoload": {
         "psr-4": {
@@ -28,19 +28,13 @@
             "Doppar\\Queue\\Tests\\": "tests/"
         }
     },
-    "extra": {
-        "doppar": {
-            "providers": [
-                "Doppar\\Queue\\QueueServiceProvider"
-            ]
-        }
-    },
     "config": {
         "sort-packages": true
     },
     "minimum-stability": "dev",
     "require": {
-        "opis/closure": "^4.4"
+        "php": "^8.5",
+        "opis/closure": "^4.5"
     },
     "prefer-stable": true
 }
