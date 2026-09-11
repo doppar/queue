@@ -127,9 +127,7 @@ class QueueSystemTest extends TestCase
         try {
             $reflection = new \ReflectionClass($className);
             $property = $reflection->getProperty($propertyName);
-            $property->setAccessible(true);
             $property->setValue(null, $value);
-            $property->setAccessible(false);
         } catch (\ReflectionException $e) {
             $this->fail("Failed to set static property {$propertyName}: " . $e->getMessage());
         }
@@ -570,7 +568,6 @@ class QueueSystemTest extends TestCase
         // This should return true since we're using more than 1MB
         $reflection = new \ReflectionClass($this->worker);
         $method = $reflection->getMethod('memoryExceeded');
-        $method->setAccessible(true);
 
         $exceeded = $method->invoke($this->worker);
         $this->assertTrue($exceeded);

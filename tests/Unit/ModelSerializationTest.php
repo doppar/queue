@@ -171,9 +171,7 @@ class ModelSerializationTest extends TestCase
         try {
             $reflection = new \ReflectionClass($className);
             $property = $reflection->getProperty($propertyName);
-            $property->setAccessible(true);
             $property->setValue(null, $value);
-            $property->setAccessible(false);
         } catch (\ReflectionException $e) {
             $this->fail("Failed to set static property {$propertyName}: " . $e->getMessage());
         }
@@ -239,7 +237,6 @@ class ModelSerializationTest extends TestCase
         // Access the user property using reflection (it's protected)
         $reflection = new \ReflectionClass($unserializedJob);
         $property = $reflection->getProperty('user');
-        $property->setAccessible(true);
         $restoredUser = $property->getValue($unserializedJob);
 
         // Verify user is a fresh instance from database
@@ -278,7 +275,6 @@ class ModelSerializationTest extends TestCase
         // Get the user from the job
         $reflection = new \ReflectionClass($unserializedJob);
         $property = $reflection->getProperty('user');
-        $property->setAccessible(true);
         $restoredUser = $property->getValue($unserializedJob);
 
         // Verify we got the updated data, not stale data
@@ -312,7 +308,6 @@ class ModelSerializationTest extends TestCase
         // Get user from job
         $reflection = new \ReflectionClass($unserializedJob);
         $property = $reflection->getProperty('user');
-        $property->setAccessible(true);
         $restoredUser = $property->getValue($unserializedJob);
 
         // User should be null
@@ -807,7 +802,6 @@ class ModelSerializationTest extends TestCase
         // Get the restored user
         $reflection = new \ReflectionClass($unserializedJob);
         $property = $reflection->getProperty('user');
-        $property->setAccessible(true);
         $restoredUser = $property->getValue($unserializedJob);
 
         // Should have the LATEST data
@@ -840,7 +834,6 @@ class ModelSerializationTest extends TestCase
         // Set a specific connection (in real app)
         $reflection = new \ReflectionClass($user);
         $property = $reflection->getProperty('connection');
-        $property->setAccessible(true);
         $property->setValue($user, 'sqlite');
 
         $job = new TestSendEmailToUserJob($user);
@@ -1176,7 +1169,6 @@ class ModelSerializationTest extends TestCase
         // Get the user from job
         $reflection = new \ReflectionClass($unserializedJob);
         $property = $reflection->getProperty('user');
-        $property->setAccessible(true);
         $restoredUser = $property->getValue($unserializedJob);
 
         // Verify we got fresh data

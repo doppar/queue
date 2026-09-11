@@ -33,7 +33,6 @@ trait InteractsWithModelSerialization
         $properties = $reflection->getProperties();
 
         foreach ($properties as $property) {
-            $property->setAccessible(true);
 
             if (!$property->isInitialized($this)) {
                 continue;
@@ -79,7 +78,6 @@ trait InteractsWithModelSerialization
             }
 
             $property = $reflection->getProperty($name);
-            $property->setAccessible(true);
 
             // Restore serialized models
             if (is_array($value) && isset($value['__serialized_model__'])) {
@@ -128,7 +126,6 @@ trait InteractsWithModelSerialization
         try {
             $reflection = new \ReflectionClass($model);
             $property = $reflection->getProperty('connection');
-            $property->setAccessible(true);
             return $property->getValue($model);
         } catch (\ReflectionException $e) {
             return null;
@@ -172,7 +169,6 @@ trait InteractsWithModelSerialization
         try {
             $reflection = new \ReflectionClass($collection);
             $property = $reflection->getProperty('modelClass');
-            $property->setAccessible(true);
             return $property->getValue($collection);
         } catch (\ReflectionException $e) {
             // If we can't get the modelClass, try to infer from first item
@@ -373,7 +369,6 @@ trait InteractsWithModelSerialization
         $reflection = new \ReflectionClass($this);
 
         foreach ($reflection->getProperties() as $property) {
-            $property->setAccessible(true);
             if ($property->isInitialized($this)) {
                 $values[$property->getName()] = $property->getValue($this);
             }

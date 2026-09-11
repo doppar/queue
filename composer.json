@@ -28,18 +28,12 @@
             "Doppar\\Queue\\Tests\\": "tests/"
         }
     },
-    "extra": {
-        "doppar": {
-            "providers": [
-                "Doppar\\Queue\\QueueLauncher"
-            ]
-        }
-    },
     "config": {
         "sort-packages": true
     },
     "minimum-stability": "dev",
     "require": {
+        "php": "^8.5",
         "opis/closure": "^4.5"
     },
     "prefer-stable": true
