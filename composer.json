@@ -14,9 +14,10 @@
         }
     ],
     "require-dev": {
+        "doppar/framework": "4.*",
         "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^13.3",
-        "doppar/framework": "4.*"
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^13.3"
     },
     "autoload": {
         "psr-4": {
@@ -36,5 +37,8 @@
         "php": "^8.5",
         "opis/closure": "^4.5"
     },
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts": {
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=1G"
+    }
 }
