@@ -1,0 +1,487 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Cannot cast array\|string\|null to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Commands/MakeJobCommand.php
+
+		-
+			message: '#^Call to an undefined static method Doppar\\Queue\\Models\\FailedJob\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Commands/QueueFailedCommand.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\FailedJob\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Commands/QueueFlushCommand.php
+
+		-
+			message: '#^Parameter \#1 \$id of method Doppar\\Queue\\Commands\\QueueFlushCommand\:\:flushJobById\(\) expects int, array\|string\|true given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Commands/QueueFlushCommand.php
+
+		-
+			message: '#^Call to an undefined static method Doppar\\Queue\\Models\\QueueJob\:\:groupBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Commands/QueueMonitorCommand.php
+
+		-
+			message: '#^Call to an undefined static method Doppar\\Queue\\Models\\QueueJob\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Commands/QueueMonitorCommand.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$attempts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Commands/QueueRetryCommand.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\FailedJob\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Commands/QueueRetryCommand.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\FailedJob\:\:\$payload\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Commands/QueueRetryCommand.php
+
+		-
+			message: '#^Parameter \#2 \$id of method Doppar\\Queue\\Commands\\QueueRetryCommand\:\:retryJobById\(\) expects int, array\|string\|true given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Commands/QueueRetryCommand.php
+
+		-
+			message: '#^Method Phaseolies\\Console\\Schedule\\Command\:\:option\(\) invoked with 2 parameters, 0\-1 required\.$#'
+			identifier: arguments.count
+			count: 3
+			path: src/Commands/QueueRunCommand.php
+
+		-
+			message: '#^Parameter \#1 \$queue of method Doppar\\Queue\\QueueWorker\:\:daemon\(\) expects string, array\|bool\|string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Commands/QueueRunCommand.php
+
+		-
+			message: '#^Part \$queue \(array\|bool\|string\|null\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: src/Commands/QueueRunCommand.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between array\|bool\|string\|null and 0 will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: src/Commands/QueueRunCommand.php
+
+		-
+			message: '#^Trait Doppar\\Queue\\Dispatchable is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: src/Dispatchable.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainId\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainIndex\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainJobs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainOnComplete\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainOnFailure\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:delayFor\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:forceQueue\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:onQueue\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Property Doppar\\Queue\\Drain\:\:\$onComplete \(\(callable\(\)\: mixed\)\|null\) does not accept \(callable\(\)\: mixed\)\|string\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Property Doppar\\Queue\\Drain\:\:\$onFailure \(\(callable\(\)\: mixed\)\|null\) does not accept \(callable\(\)\: mixed\)\|string\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: src/Drain.php
+
+		-
+			message: '#^PHPDoc tag @method for method Doppar\\Queue\\Facades\\Queue\:\:delete\(\) parameter \#1 \$queueJob contains unknown class Phaseolies\\Queue\\Models\\QueueJob\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Facades/Queue.php
+
+		-
+			message: '#^PHPDoc tag @method for method Doppar\\Queue\\Facades\\Queue\:\:markAsFailed\(\) parameter \#1 \$queueJob contains unknown class Phaseolies\\Queue\\Models\\QueueJob\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Facades/Queue.php
+
+		-
+			message: '#^PHPDoc tag @method for method Doppar\\Queue\\Facades\\Queue\:\:pop\(\) return type contains unknown class Phaseolies\\Queue\\Models\\QueueJob\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Facades/Queue.php
+
+		-
+			message: '#^PHPDoc tag @method for method Doppar\\Queue\\Facades\\Queue\:\:push\(\) parameter \#1 \$job contains unknown class Phaseolies\\Queue\\Contracts\\JobInterface\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Facades/Queue.php
+
+		-
+			message: '#^PHPDoc tag @method for method Doppar\\Queue\\Facades\\Queue\:\:release\(\) parameter \#1 \$queueJob contains unknown class Phaseolies\\Queue\\Models\\QueueJob\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Facades/Queue.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 1
+			path: src/InteractsWithModelSerialization.php
+
+		-
+			message: '#^Instanceof between Phaseolies\\Database\\Entity\\Model and Phaseolies\\Database\\Entity\\Model will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/InteractsWithModelSerialization.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainId\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainIndex\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainJobs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainOnComplete\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$chainOnFailure\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$queueName\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:applyQueueableAttributes\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:__serialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:__unserialize\(\) has parameter \$values with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:dispatchAfter\(\) should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:dispatchNow\(\) should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:dispatchOn\(\) should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:getSerializedPropertyValue\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:restoreArray\(\) has parameter \$array with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:restoreArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:restoreCollection\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:restoreModel\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:restoreRelations\(\) has parameter \$relations with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:serializeArray\(\) has parameter \$array with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:serializeArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:serializeCollection\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Method Doppar\\Queue\\Job\:\:serializeRelations\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Offset int might not exist on array\<Doppar\\Queue\\Contracts\\JobInterface\>\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Parameter \#1 \$job of static method Doppar\\Queue\\Facades\\Queue\:\:push\(\) expects Phaseolies\\Queue\\Contracts\\JobInterface, \$this\(Doppar\\Queue\\Job\) given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Job.php
+
+		-
+			message: '#^Parameter \#1 \$job of static method Doppar\\Queue\\Facades\\Queue\:\:push\(\) expects Phaseolies\\Queue\\Contracts\\JobInterface, Doppar\\Queue\\Contracts\\JobInterface given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, array\<Doppar\\Queue\\Contracts\\JobInterface\>\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Job.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 2
+			path: src/Job.php
+
+		-
+			message: '#^Property Doppar\\Queue\\Models\\FailedJob\:\:\$creatable type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Models/FailedJob.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$attempts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Models/QueueJob.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$available_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Models/QueueJob.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$reserved_at\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Models/QueueJob.php
+
+		-
+			message: '#^Property Doppar\\Queue\\Models\\QueueJob\:\:\$creatable type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Models/QueueJob.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$payload\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/QueueManager.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$queue\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/QueueManager.php
+
+		-
+			message: '#^Call to an undefined static method Doppar\\Queue\\Models\\QueueJob\:\:available\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/QueueManager.php
+
+		-
+			message: '#^Call to an undefined static method Doppar\\Queue\\Models\\QueueJob\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/QueueManager.php
+
+		-
+			message: '#^Method Doppar\\Queue\\QueueManager\:\:delete\(\) should return bool but returns bool\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: src/QueueManager.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Contracts\\JobInterface\:\:\$attempts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$attempts\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Access to an undefined property Doppar\\Queue\\Models\\QueueJob\:\:\$payload\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:dispatchNextChainJob\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:handleChainFailure\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Call to an undefined method Doppar\\Queue\\Contracts\\JobInterface\:\:isChained\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/QueueWorker.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Method Doppar\\Queue\\QueueWorker\:\:configureOptions\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Method Doppar\\Queue\\QueueWorker\:\:daemon\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/QueueWorker.php
+
+		-
+			message: '#^Call to an undefined static method Phaseolies\\Support\\Facades\\Schema\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/database/migrations/2025_04_19_184307_create_queue_jobs_table.php
+
+		-
+			message: '#^Call to an undefined static method Phaseolies\\Support\\Facades\\Schema\:\:dropIfExists\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/database/migrations/2025_04_19_184307_create_queue_jobs_table.php
