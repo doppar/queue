@@ -13,17 +13,17 @@
 
 ## About Doppar Queue
 
-> **Note:** This repository contains the core code of the Doppar framework queue package. If you want to build an application using Doppar, visit the main [Doppar repository](https://github.com/doppar/doppar).
+A queue is a background job processing system that allows tasks to run asynchronously instead of blocking your main application flow. It improves performance, distributes workload efficiently, and ensures time-consuming tasks are handled reliably in the background. Queues are essential for scaling modern applications and maintaining smooth user experiences.
 
 Doppar queue system offers robust features including multiple queue support for organizing jobs by priority or category, automatic retry logic with configurable attempts and delays, and comprehensive failed job tracking for easier debugging. It supports delayed execution for scheduling jobs in the future, graceful shutdown handling to safely stop workers, and built-in memory management that automatically restarts workers when limits are exceeded.
 
 ## Contributing
 
-Thank you for considering contributing to the Doppar framework! The contribution guide can be found in the [Doppar documentation](https://doppar.com/versions/3.x/contributions.html).
+Thank you for considering contributing to the Doppar framework! The contribution guide can be found in the [Doppar documentation](https://doppar.com/versions/4.x/contributions).
 
 ## Code of Conduct
 
-In order to ensure that the Doppar community is welcoming to all, please review and abide by the [Code of Conduct](https://doppar.com/versions/3.x/contributions.html#code-of-conduct).
+In order to ensure that the Doppar community is welcoming to all, please review and abide by the [Code of Conduct](https://doppar.com/versions/4.x/contributions#code-of-conduct).
 
 ## Security Vulnerabilities
 
