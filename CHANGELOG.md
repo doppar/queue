@@ -1,5 +1,15 @@
 # Release Notes
 
+## 4.0.0 - 2026-09-16
+
+### What's Changed
+
+* ready for doppar 4.x by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/28
+* fix phpstan error by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/29
+* readme.md updated for 4.x version: by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/30
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v1.2.4...4.0.0
+
 ## v1.2.4 - 2026-05-13
 
 ### What's Changed
