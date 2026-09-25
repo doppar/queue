@@ -43,8 +43,8 @@ class ModelSerializationTest extends TestCase
 
     protected function setUp(): void
     {
-        Container::setInstance(new MockContainer());
-        $container = new Container();
+        $container = new MockContainer();
+        Container::setInstance($container);
         $container->bind('request', fn() => new Request());
         $container->bind('url', fn() => UrlGenerator::class);
         $container->bind('db', fn() => new Database('default'));
