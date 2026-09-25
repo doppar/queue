@@ -201,6 +201,17 @@ class DatabaseDriverTest extends QueueDriverContract
         $this->assertSame('plain', $this->driver->pop('default')?->payload);
     }
 
+    public function testAnExceptionMessageWithUnstorableBytesStillFailsTheJob(): void
+    {
+        $this->push('a');
+        $job = $this->driver->pop('default');
+
+        $this->assertTrue($this->driver->fail($job, "bad \0 byte and \xFF\xFE invalid utf-8"));
+
+        $this->assertSame('bad \\0 byte and ?? invalid utf-8', $this->driver->failedJobs()[0]->exception);
+        $this->assertSame(0, $this->driver->stats('default')['reserved'], 'the job must not be left stuck');
+    }
+
     public function testCustomTableNamesAreHonoured(): void
     {
         $this->pdo->exec('ALTER TABLE queue_jobs RENAME TO my_jobs');

@@ -3,6 +3,7 @@
 namespace Doppar\Queue\Tests\Drivers;
 
 use PDO;
+use Doppar\Queue\Tests\Support\NeedsBackend;
 use Doppar\Queue\Tests\Support\QueueSchema;
 
 /**
@@ -18,6 +19,8 @@ use Doppar\Queue\Tests\Support\QueueSchema;
  */
 class MysqlDatabaseDriverTest extends DatabaseDriverTest
 {
+    use NeedsBackend;
+
     protected function isSqlite(): bool
     {
         return false;
@@ -28,13 +31,13 @@ class MysqlDatabaseDriverTest extends DatabaseDriverTest
         $dsn = getenv('QUEUE_TEST_MYSQL_DSN');
 
         if (!$dsn) {
-            $this->markTestSkipped('Set QUEUE_TEST_MYSQL_DSN to run the MySQL driver tests.');
+            $this->backendUnavailable('Set QUEUE_TEST_MYSQL_DSN to run the MySQL driver tests.');
         }
 
         try {
             $pdo = new PDO($dsn, getenv('QUEUE_TEST_MYSQL_USER') ?: null, getenv('QUEUE_TEST_MYSQL_PASS') ?: null);
         } catch (\PDOException $e) {
-            $this->markTestSkipped('MySQL is not reachable: ' . $e->getMessage());
+            $this->backendUnavailable('MySQL is not reachable: ' . $e->getMessage());
         }
 
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -42,7 +45,7 @@ class MysqlDatabaseDriverTest extends DatabaseDriverTest
         $database = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
 
         if (!preg_match('/test|scratch/i', $database)) {
-            $this->markTestSkipped("Refusing to drop tables in [{$database}]: its name must contain \"test\" or \"scratch\".");
+            $this->backendUnavailable("Refusing to drop tables in [{$database}]: its name must contain \"test\" or \"scratch\".");
         }
 
         $this->dropTables($pdo);

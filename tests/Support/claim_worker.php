@@ -19,7 +19,14 @@ use Predis\Client;
 
 $spec = json_decode(base64_decode($argv[1]), true, flags: JSON_THROW_ON_ERROR);
 
-if ($spec['backend'] === 'mysql') {
+if ($spec['backend'] === 'pgsql') {
+    $pdo = new PDO($spec['pg_dsn'], $spec['pg_user'], $spec['pg_pass']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec('SET search_path TO ' . $spec['pg_schema']);
+    (new ReflectionProperty(Database::class, 'connections'))->setValue(null, ['contract' => $pdo]);
+
+    $driver = new DatabaseDriver(['connection' => 'contract', 'lease' => $spec['lease']]);
+} elseif ($spec['backend'] === 'mysql') {
     $pdo = new PDO($spec['dsn'], $spec['user'], $spec['pass']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     (new ReflectionProperty(Database::class, 'connections'))->setValue(null, ['contract' => $pdo]);

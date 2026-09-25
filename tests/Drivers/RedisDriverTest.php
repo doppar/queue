@@ -6,6 +6,7 @@ use Doppar\Queue\Contracts\QueueDriver;
 use Doppar\Queue\Drivers\RedisDriver;
 use Doppar\Queue\Support\Envelope;
 use Doppar\Queue\Tests\Contract\QueueDriverContract;
+use Doppar\Queue\Tests\Support\NeedsBackend;
 use Predis\Client;
 
 /**
@@ -18,6 +19,8 @@ use Predis\Client;
  */
 class RedisDriverTest extends QueueDriverContract
 {
+    use NeedsBackend;
+
     private Client $client;
 
     private string $prefix;
@@ -29,7 +32,7 @@ class RedisDriverTest extends QueueDriverContract
         try {
             $this->client->ping();
         } catch (\Throwable $e) {
-            $this->markTestSkipped('Redis is not reachable: ' . $e->getMessage());
+            $this->backendUnavailable('Redis is not reachable: ' . $e->getMessage());
         }
 
         $this->prefix = '{dqtest_' . bin2hex(random_bytes(6)) . '}';

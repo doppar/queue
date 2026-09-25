@@ -48,7 +48,7 @@ class QueueManager
 
     /**
      * @param array<string, mixed>|null $config
-     * @param Closure(): int|null
+     * @param (Closure(): int)|null $clock
      */
     public function __construct(?array $config = null, ?Closure $clock = null)
     {

@@ -12,6 +12,7 @@ use Phaseolies\Database\Database;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Doppar\Queue\Tests\Support\NeedsBackend;
 
 /**
  * Races real operating-system processes against one shared backend. In-process
@@ -20,6 +21,8 @@ use PHPUnit\Framework\TestCase;
 #[Group('concurrency')]
 class ConcurrentClaimTest extends TestCase
 {
+    use NeedsBackend;
+
     private const WORKERS = 6;
 
     private const JOBS = 600;
@@ -30,18 +33,20 @@ class ConcurrentClaimTest extends TestCase
 
     private ?PDO $mysqlPdo = null;
 
+    private ?PDO $pgsqlPdo = null;
+
     /**
      * @return array<string, array{string}>
      */
     public static function backends(): array
     {
-        return ['sqlite file' => ['sqlite'], 'redis' => ['redis'], 'mysql' => ['mysql']];
+        return ['sqlite file' => ['sqlite'], 'redis' => ['redis'], 'mysql' => ['mysql'], 'pgsql' => ['pgsql']];
     }
 
     protected function setUp(): void
     {
         if (!function_exists('proc_open') || !function_exists('posix_kill')) {
-            $this->markTestSkipped('proc_open and posix are required.');
+            $this->backendUnavailable('proc_open and posix are required.');
         }
 
         $this->sqliteFile = sys_get_temp_dir() . '/dq_concurrency_' . bin2hex(random_bytes(6)) . '.sqlite';
@@ -57,6 +62,7 @@ class ConcurrentClaimTest extends TestCase
         (new \ReflectionProperty(Database::class, 'connections'))->setValue(null, []);
 
         $this->mysqlPdo?->exec('DROP TABLE IF EXISTS queue_jobs, failed_jobs');
+        $this->pgsqlPdo?->exec('DROP TABLE IF EXISTS queue_jobs, failed_jobs');
 
         if (isset($this->redisPrefix)) {
             try {
@@ -78,18 +84,44 @@ class ConcurrentClaimTest extends TestCase
 
     private function driver(string $backend, int $lease): QueueDriver
     {
+        if ($backend === 'pgsql') {
+            $dsn = getenv('QUEUE_TEST_PGSQL_DSN');
+            $schema = (string) getenv('QUEUE_TEST_PGSQL_SCHEMA');
+
+            if (!$dsn || !preg_match('/^[a-z0-9_]*(test|scratch)[a-z0-9_]*$/i', $schema)) {
+                $this->backendUnavailable('Set QUEUE_TEST_PGSQL_DSN and a QUEUE_TEST_PGSQL_SCHEMA containing "test" or "scratch".');
+            }
+
+            $pdo = new PDO($dsn, getenv('QUEUE_TEST_PGSQL_USER') ?: null, getenv('QUEUE_TEST_PGSQL_PASS') ?: null);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            // The name was checked above, so it is safe to create it when missing.
+            $pdo->exec("CREATE SCHEMA IF NOT EXISTS {$schema}");
+            $pdo->exec("SET search_path TO {$schema}");
+
+            if (trim((string) $pdo->query('SHOW search_path')->fetchColumn(), '" ') !== $schema) {
+                $this->backendUnavailable('Could not pin search_path to the scratch schema.');
+            }
+
+            $pdo->exec('DROP TABLE IF EXISTS queue_jobs, failed_jobs');
+            QueueSchema::createPgsql($pdo);
+            $this->pgsqlPdo = $pdo;
+            (new \ReflectionProperty(Database::class, 'connections'))->setValue(null, ['contract' => $pdo]);
+
+            return new DatabaseDriver(['connection' => 'contract', 'lease' => $lease]);
+        }
+
         if ($backend === 'mysql') {
             $dsn = getenv('QUEUE_TEST_MYSQL_DSN');
 
             if (!$dsn) {
-                $this->markTestSkipped('Set QUEUE_TEST_MYSQL_DSN to run the MySQL concurrency tests.');
+                $this->backendUnavailable('Set QUEUE_TEST_MYSQL_DSN to run the MySQL concurrency tests.');
             }
 
             $pdo = new PDO($dsn, getenv('QUEUE_TEST_MYSQL_USER') ?: null, getenv('QUEUE_TEST_MYSQL_PASS') ?: null);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             if (!preg_match('/test|scratch/i', (string) $pdo->query('SELECT DATABASE()')->fetchColumn())) {
-                $this->markTestSkipped('Refusing to drop tables: the database name must contain "test" or "scratch".');
+                $this->backendUnavailable('Refusing to drop tables: the database name must contain "test" or "scratch".');
             }
 
             $pdo->exec('DROP TABLE IF EXISTS queue_jobs, failed_jobs');
@@ -116,7 +148,7 @@ class ConcurrentClaimTest extends TestCase
         try {
             $client->ping();
         } catch (\Throwable $e) {
-            $this->markTestSkipped('Redis is not reachable: ' . $e->getMessage());
+            $this->backendUnavailable('Redis is not reachable: ' . $e->getMessage());
         }
 
         return new RedisDriver(['prefix' => $this->redisPrefix, 'lease' => $lease], $client);
@@ -133,6 +165,10 @@ class ConcurrentClaimTest extends TestCase
             'prefix' => $this->redisPrefix,
             'url' => getenv('QUEUE_TEST_REDIS_URL') ?: 'redis://127.0.0.1:6379',
             'db' => (int) (getenv('QUEUE_TEST_REDIS_DB') ?: 15),
+            'pg_dsn' => getenv('QUEUE_TEST_PGSQL_DSN') ?: '',
+            'pg_user' => getenv('QUEUE_TEST_PGSQL_USER') ?: null,
+            'pg_pass' => getenv('QUEUE_TEST_PGSQL_PASS') ?: null,
+            'pg_schema' => (string) getenv('QUEUE_TEST_PGSQL_SCHEMA'),
             'dsn' => getenv('QUEUE_TEST_MYSQL_DSN') ?: '',
             'user' => getenv('QUEUE_TEST_MYSQL_USER') ?: null,
             'pass' => getenv('QUEUE_TEST_MYSQL_PASS') ?: null,

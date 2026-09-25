@@ -40,7 +40,7 @@ class RedisDriver extends BaseDriver
     /**
      * @param array<string, mixed> $config
      * @param Client|null $client
-     * @param Closure(): int|null $clock
+     * @param (Closure(): int)|null $clock
      */
     public function __construct(array $config = [], ?Client $client = null, ?Closure $clock = null)
     {

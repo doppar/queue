@@ -7,6 +7,7 @@ use Doppar\Queue\QueueManager;
 use Doppar\Queue\Tests\Mock\Jobs\SleepJob;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Doppar\Queue\Tests\Support\NeedsBackend;
 use Predis\Client;
 
 /**
@@ -18,6 +19,8 @@ use Predis\Client;
 #[Group('slow')]
 class LeaseRenewalTest extends TestCase
 {
+    use NeedsBackend;
+
     private const LEASE = 3;
 
     private const JOB_SECONDS = 6;
@@ -29,7 +32,7 @@ class LeaseRenewalTest extends TestCase
     protected function setUp(): void
     {
         if (!extension_loaded('pcntl') || !function_exists('proc_open')) {
-            $this->markTestSkipped('pcntl and proc_open are required.');
+            $this->backendUnavailable('pcntl and proc_open are required.');
         }
 
         $this->client = RedisDriverTest::redisClient();
@@ -37,7 +40,7 @@ class LeaseRenewalTest extends TestCase
         try {
             $this->client->ping();
         } catch (\Throwable $e) {
-            $this->markTestSkipped('Redis is not reachable: ' . $e->getMessage());
+            $this->backendUnavailable('Redis is not reachable: ' . $e->getMessage());
         }
 
         $this->prefix = '{dqlease_' . bin2hex(random_bytes(6)) . '}';

@@ -24,7 +24,7 @@ abstract class BaseDriver implements QueueDriver
 
     /**
      * @param array<string, mixed> $config
-     * @param Closure(): int|null $clock
+     * @param (Closure(): int)|null $clock
      */
     public function __construct(array $config = [], ?Closure $clock = null)
     {

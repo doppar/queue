@@ -219,7 +219,7 @@ class DatabaseDriver extends BaseDriver
                 $this->config['name'] ?? 'database',
                 $row['queue'],
                 $row['payload'],
-                $exception,
+                $this->storableText($exception),
                 $this->now(),
             ]);
 
@@ -464,6 +464,19 @@ class DatabaseDriver extends BaseDriver
             || (str_contains($payload, "\0") && $this->pdo()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
 
         return $needsEncoding ? self::ENCODED_PREFIX . base64_encode($payload) : $payload;
+    }
+
+    /**
+     * Make diagnostic text safe for a text column
+     *
+     * @param string $text
+     * @return string
+     */
+    private function storableText(string $text): string
+    {
+        $text = str_replace("\0", '\\0', $text);
+
+        return mb_check_encoding($text, 'UTF-8') ? $text : mb_scrub($text, 'UTF-8');
     }
 
     /**

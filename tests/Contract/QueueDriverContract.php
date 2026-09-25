@@ -616,6 +616,7 @@ abstract class QueueDriverContract extends TestCase
             'ascii' => ['plain text'],
             'unicode' => ['ব্যবহারকারী — naïve café 日本語 🚀'],
             'null bytes and binary' => ["a\0b\xFF\xFEc\x01\x02"],
+            'null byte in valid utf-8' => ["abc\0def \u{1F680}"],
             'serialized php' => [serialize(['job' => new \ArrayObject([1, 2, 3]), 'n' => 1.5])],
             'quotes and sql' => ["'; DROP TABLE queue_jobs; -- \" \\ %s ?"],
             'large (200 KB)' => [str_repeat('0123456789abcdef', 12_800)],
@@ -633,7 +634,9 @@ abstract class QueueDriverContract extends TestCase
     public function testFailedPayloadAndExceptionSurviveByteForByte(): void
     {
         $payload = "bin\0ary ব্যবহারকারী";
-        $exception = "Error: \"quoted\" \0 trace\nline 2";
+        // Diagnostic text: databases may not store NUL or invalid UTF-8 here, so
+        // the contract only covers text every backend can hold.
+        $exception = "Error: \"quoted\" ব্যবহারকারী 🚀 trace\nline 2 'x' % ?";
 
         $this->push('a', payload: $payload);
         $this->driver->fail($this->driver->pop('default'), $exception);
