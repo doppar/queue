@@ -1,5 +1,13 @@
 # Release Notes
 
+## v4.1.0 - 2026-09-25
+
+### What's Changed
+
+* Driver-based queue: Redis and memory drivers, priority, unique jobs, backoff, leases and crash recovery by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/31
+
+**Full Changelog**: https://github.com/doppar/queue/compare/4.0.0...v4.1.0
+
 ## 4.0.0 - 2026-09-16
 
 ### What's Changed
