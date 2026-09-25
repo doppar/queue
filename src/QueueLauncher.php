@@ -21,7 +21,10 @@ class QueueLauncher extends ServiceLauncher implements GhostableLauncher
      */
     public function register(): void
     {
-        $this->app->singleton('queue.worker', QueueManager::class);
+        $this->mergeConfig(__DIR__ . '/../config/queue.php', 'queue');
+
+        $this->app->singleton(QueueManager::class, fn(): QueueManager => new QueueManager());
+        $this->app->alias(QueueManager::class, 'queue.worker');
     }
 
     /**
@@ -36,6 +39,10 @@ class QueueLauncher extends ServiceLauncher implements GhostableLauncher
         $this->publishes([
             __DIR__ . '/database/migrations' => schema_path('migrations'),
         ], 'migrations');
+
+        $this->publishes([
+            __DIR__ . '/../config/queue.php' => config_path('queue.php'),
+        ], 'config');
 
         $this->commands([
             QueueRunCommand::class,
@@ -56,6 +63,7 @@ class QueueLauncher extends ServiceLauncher implements GhostableLauncher
     {
         return [
             'queue.worker',
+            QueueManager::class,
         ];
     }
 }

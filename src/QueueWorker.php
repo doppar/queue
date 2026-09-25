@@ -2,7 +2,8 @@
 
 namespace Doppar\Queue;
 
-use Doppar\Queue\Models\QueueJob;
+use Doppar\Queue\Support\ReservedJob;
+use Doppar\Queue\Exceptions\MaxAttemptsExceededException;
 use Doppar\Queue\Exceptions\JobTimeoutException;
 use Doppar\Queue\Contracts\JobInterface;
 
@@ -80,6 +81,34 @@ class QueueWorker
     protected $insideTimeoutContext = false;
 
     /**
+     * The queue connection this worker consumes, or null for the default.
+     *
+     * @var string|null
+     */
+    protected ?string $connection = null;
+
+    /**
+     * The job currently being executed, kept so its lease can be renewed.
+     *
+     * @var ReservedJob|null
+     */
+    protected ?ReservedJob $reservation = null;
+
+    /**
+     * Unix time the lease of the current job was last renewed.
+     *
+     * @var int
+     */
+    protected int $leaseRenewedAt = 0;
+
+    /**
+     * Seconds between lease renewals while a job runs in a timeout child process.
+     *
+     * @var int
+     */
+    protected int $leaseRenewEvery = 20;
+
+    /**
      * Create a new queue worker.
      *
      * @param QueueManager $manager
@@ -109,6 +138,26 @@ class QueueWorker
     public function setOnJobProcessed(callable $callback): void
     {
         $this->onJobProcessed = $callback;
+    }
+
+    /**
+     * Claim and process at most one job, without sleeping when the queue is empty.
+     *
+     * @param string|array<int, string> $queue A name, a comma separated list, or an array, tried in order
+     * @return bool
+     */
+    public function runNextJob(string|array $queue = 'default'): bool
+    {
+        $queueJob = $this->manager->pop($queue, $this->connection);
+
+        if ($queueJob === null) {
+            return false;
+        }
+
+        $this->processJob($queueJob);
+        $this->jobsProcessed++;
+
+        return true;
     }
 
     /**
@@ -163,7 +212,7 @@ class QueueWorker
     protected function processNextJob(string $queue): void
     {
         try {
-            $queueJob = $this->manager->pop($queue);
+            $queueJob = $this->manager->pop($queue, $this->connection);
 
             if ($queueJob === null) {
                 $this->sleep($this->sleep);
@@ -181,26 +230,63 @@ class QueueWorker
     /**
      * Process a single job.
      *
-     * @param QueueJob $queueJob
+     * @param ReservedJob $queueJob
      * @return void
      */
-    protected function processJob(QueueJob $queueJob): void
+    protected function processJob(ReservedJob $queueJob): void
     {
+        $job = null;
+
         try {
             // Unserialize the job
             $job = $this->manager->unserializeJob($queueJob->payload);
             $job->attempts = $queueJob->attempts;
 
+            // A job whose lease expired mid-run comes back with its attempts
+            // already spent; do not run it again.
+            $maxAttempts = max(1, $job->tries());
+
+            if ($queueJob->attempts > $maxAttempts) {
+                throw new MaxAttemptsExceededException(
+                    "Job has been attempted too many times ({$queueJob->attempts} of {$maxAttempts})."
+                );
+            }
+
             if (is_callable($this->onJobProcessing)) {
                 ($this->onJobProcessing)($job);
             }
 
+            $this->reservation = $queueJob;
+            $this->leaseRenewedAt = time();
+
             // Execute the job with timeout
             $this->executeJobWithTimeout($job);
+        } catch (\Throwable $e) {
+            $this->reservation = null;
+            $this->handleJobException($queueJob, $job, $e);
 
-            // Delete the job from queue if successful
-            $this->manager->delete($queueJob);
+            return;
+        }
 
+        $this->reservation = null;
+
+        // The job ran. If it cannot be removed, its lease will expire and it will
+        // run again (at-least-once); that is not a job failure, and the follow-up
+        // work below is left to the run that finally removes it, so a chain is
+        // never advanced twice.
+        try {
+            if (!$this->manager->delete($queueJob, $this->connection)) {
+                $this->logError("Job {$job->getJobId()} finished but its lease was lost; another worker may run it again");
+
+                return;
+            }
+        } catch (\Throwable $e) {
+            $this->logError("Job {$job->getJobId()} finished but could not be removed from the queue: " . $e->getMessage());
+
+            return;
+        }
+
+        try {
             // Dispatch next job in chain if this job is chained
             if ($job->isChained()) {
                 $job->dispatchNextChainJob();
@@ -211,7 +297,7 @@ class QueueWorker
                 ($this->onJobProcessed)($job);
             }
         } catch (\Throwable $e) {
-            $this->handleJobException($queueJob, $job ?? null, $e);
+            $this->logError("Post-processing of job {$job->getJobId()} failed: " . $e->getMessage());
         }
     }
 
@@ -300,6 +386,8 @@ class QueueWorker
                 return;
             }
 
+            $this->renewLease();
+
             // Check timeout
             if ((time() - $startTime) >= $timeout) {
                 $timedOut = true;
@@ -338,19 +426,19 @@ class QueueWorker
     /**
      * Handle an exception that occurred while processing a job.
      *
-     * @param QueueJob $queueJob
+     * @param ReservedJob $queueJob
      * @param JobInterface|null $job
      * @param \Throwable $exception
      * @return void
      */
-    protected function handleJobException(QueueJob $queueJob, ?JobInterface $job, \Throwable $exception): void
+    protected function handleJobException(ReservedJob $queueJob, ?JobInterface $job, \Throwable $exception): void
     {
         try {
             $this->logError("Job failed: " . $exception->getMessage());
 
             if ($job === null) {
                 // Could not unserialize job, mark as failed immediately
-                $this->manager->markAsFailed($queueJob, $exception);
+                $this->manager->markAsFailed($queueJob, $exception, $this->connection);
                 return;
             }
 
@@ -362,8 +450,8 @@ class QueueWorker
             // Check if job should be retried
             if ($queueJob->attempts < $job->tries()) {
                 // Release the job back to the queue with delay
-                $delay = $job->retryAfter();
-                $released = $this->manager->release($queueJob, $delay);
+                $delay = $this->retryDelay($job, $queueJob->attempts);
+                $released = $this->manager->release($queueJob, $delay, $this->connection);
 
                 if ($released) {
                     $this->logInfo("Job {$job->getJobId()} released back to queue (attempt {$queueJob->attempts}/{$job->tries()})");
@@ -372,7 +460,7 @@ class QueueWorker
                 }
             } else {
                 // Max attempts reached, mark as failed
-                $this->manager->markAsFailed($queueJob, $exception);
+                $this->manager->markAsFailed($queueJob, $exception, $this->connection);
 
                 // Call the failed method on the job
                 try {
@@ -385,6 +473,50 @@ class QueueWorker
             }
         } catch (\Throwable $e) {
             $this->logError("Error handling job exception: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Work out how long to wait before retrying a job.
+     *
+     * @param JobInterface $job
+     * @param int $attempts
+     * @return int Seconds
+     */
+    protected function retryDelay(JobInterface $job, int $attempts): int
+    {
+        $backoff = method_exists($job, 'backoff') ? $job->backoff() : null;
+
+        if (is_array($backoff) && $backoff !== []) {
+            $backoff = array_values($backoff);
+
+            return max(0, (int) $backoff[min(max($attempts, 1), count($backoff)) - 1]);
+        }
+
+        if (is_int($backoff)) {
+            return max(0, $backoff);
+        }
+
+        return max(0, $job->retryAfter());
+    }
+
+    /**
+     * Keep the lease of the running job alive.
+     *
+     * @return void
+     */
+    protected function renewLease(): void
+    {
+        if ($this->reservation === null || (time() - $this->leaseRenewedAt) < $this->leaseRenewEvery) {
+            return;
+        }
+
+        $this->leaseRenewedAt = time();
+
+        try {
+            $this->manager->extendLease($this->reservation, $this->leaseRenewEvery * 3, $this->connection);
+        } catch (\Throwable $e) {
+            $this->logError("Could not renew job lease: " . $e->getMessage());
         }
     }
 
@@ -524,6 +656,10 @@ class QueueWorker
         }
 
         $this->maxJobs = $options['maxJobs'] ?? null;
+
+        if (isset($options['connection'])) {
+            $this->connection = (string) $options['connection'];
+        }
     }
 
     /**
@@ -590,6 +726,28 @@ class QueueWorker
     public function setMaxJobs(?int $maxJobs): void
     {
         $this->maxJobs = $maxJobs;
+    }
+
+    /**
+     * Set the queue connection to consume.
+     *
+     * @param string|null $connection
+     * @return void
+     */
+    public function setConnection(?string $connection): void
+    {
+        $this->connection = $connection;
+    }
+
+    /**
+     * Set how often, in seconds, the lease of a running timeout job is renewed.
+     *
+     * @param int $seconds
+     * @return void
+     */
+    public function setLeaseRenewInterval(int $seconds): void
+    {
+        $this->leaseRenewEvery = max(1, $seconds);
     }
 
     /**

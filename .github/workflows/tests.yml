@@ -15,6 +15,55 @@ jobs:
 
     name: PHP 8.5
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: queue_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: queue_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # A backend that is down must fail the run, not silently skip its tests.
+      QUEUE_TEST_REQUIRE_BACKENDS: 1
+      QUEUE_TEST_REDIS_URL: redis://127.0.0.1:6379
+      QUEUE_TEST_MYSQL_DSN: mysql:host=127.0.0.1;port=3306;dbname=queue_test;charset=utf8mb4
+      QUEUE_TEST_MYSQL_USER: root
+      QUEUE_TEST_MYSQL_PASS: password
+      QUEUE_TEST_PGSQL_DSN: pgsql:host=127.0.0.1;port=5432;dbname=queue_test
+      QUEUE_TEST_PGSQL_USER: postgres
+      QUEUE_TEST_PGSQL_PASS: password
+      QUEUE_TEST_PGSQL_SCHEMA: queue_test
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,7 +72,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: dom, curl, libxml, mbstring, zip
+          extensions: dom, curl, libxml, mbstring, zip, pdo_sqlite, pdo_mysql, pdo_pgsql, pcntl, posix
           ini-values: error_reporting=E_ALL
           tools: composer:v2
           coverage: none

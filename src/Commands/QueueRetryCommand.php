@@ -3,83 +3,80 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
+use Doppar\Queue\Commands\Concerns\ReadsOptions;
 use Doppar\Queue\QueueManager;
-use Doppar\Queue\Models\FailedJob;
+use Doppar\Queue\Support\FailedJobRecord;
 
 class QueueRetryCommand extends Command
 {
+    use ReadsOptions;
+
     /**
-     * The name of the console command.
+     * The name and signature of the console command.
      *
      * @var string
      */
-    protected $name = 'queue:retry {--id=}';
+    protected $name = 'queue:retry {--id=} {--connection=}';
 
     /**
-     * The command description.
+     * The console command description.
      *
      * @var string
      */
     protected $description = 'Retry failed job(s) by ID or all if no ID is provided';
 
     /**
-     * Execute the console command
-     * Example: php pool queue:retry --id=4
+     * Execute the console command.
      *
      * @return int
      */
     public function handle(): int
     {
-        $id = $this->option('id');
         $manager = app(QueueManager::class);
+        $connection = $this->stringOption('connection');
+        $id = $this->stringOption('id');
 
         if ($id) {
-            return $this->retryJobById($manager, $id);
+            $record = $manager->connection($connection)->findFailed($id);
+
+            if ($record === null) {
+                $this->error("Failed job with ID {$id} not found.");
+                return Command::FAILURE;
+            }
+
+            return $this->retryFailedJob($manager, $record, $connection) ? Command::SUCCESS : Command::FAILURE;
         }
 
-        FailedJob::query()
-            ->cursor(function (FailedJob $failedJob) use ($manager) {
-                $this->retryFailedJob($manager, $failedJob);
-            });
+        foreach ($manager->connection($connection)->failedJobs() as $record) {
+            $this->retryFailedJob($manager, $record, $connection);
+        }
 
         return Command::SUCCESS;
     }
 
-    protected function retryJobById(QueueManager $manager, int $id): int
-    {
-        $failedJob = FailedJob::find($id);
-
-        if (!$failedJob) {
-            $this->error("Failed job with ID {$id} not found.");
-            return Command::FAILURE;
-        }
-
-        if ($this->retryFailedJob($manager, $failedJob)) {
-            return Command::SUCCESS;
-        }
-
-        return Command::FAILURE;
-    }
-
-    protected function retryFailedJob(QueueManager $manager, FailedJob $failedJob): bool
+    /**
+     * Push one failed job back onto its queue.
+     *
+     * @param QueueManager $manager
+     * @param FailedJobRecord $record
+     * @param string|null $connection
+     * @return bool
+     */
+    protected function retryFailedJob(QueueManager $manager, FailedJobRecord $record, ?string $connection): bool
     {
         try {
-            $job = $manager->unserializeJob($failedJob->payload);
+            $job = $manager->unserializeJob($record->payload);
             $jobClass = get_class($job);
 
-            // Reset attempts
-            $job->attempts = 0;
+            if (!$manager->retryFailed($record, $connection)) {
+                $this->error("✖ Job ID {$record->id} was not requeued (a unique job with the same key is already queued).");
+                return false;
+            }
 
-            // Push back to queue
-            $manager->push($job);
-
-            // Delete from failed jobs
-            $failedJob->delete();
-
-            $this->info("✔ Retried job [{$jobClass}] (ID: {$failedJob->id})");
+            $this->info("✔ Retried job [{$jobClass}] (ID: {$record->id})");
             return true;
         } catch (\Throwable $e) {
-            $this->error("✖ Failed to retry job ID {$failedJob->id}: " . $e->getMessage());
+            $this->error("✖ Failed to retry job ID {$record->id}: " . $e->getMessage());
             return false;
         }
     }

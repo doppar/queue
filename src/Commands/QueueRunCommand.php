@@ -3,17 +3,20 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
+use Doppar\Queue\Commands\Concerns\ReadsOptions;
 use Doppar\Queue\QueueWorker;
 use Doppar\Queue\QueueManager;
 
 class QueueRunCommand extends Command
 {
+    use ReadsOptions;
+
     /**
      * The name of the console command.
      *
      * @var string
      */
-    protected $name = 'queue:run {--queue=default} {--sleep=3} {--memory=128} {--timeout=0} {--limit=}';
+    protected $name = 'queue:run {--queue=default} {--connection=} {--sleep=3} {--memory=128} {--timeout=0} {--limit=}';
 
     /**
      * The command description.
@@ -57,7 +60,8 @@ class QueueRunCommand extends Command
     public function handle(): int
     {
         return $this->withTiming(function () {
-            $queue = $this->option('queue', 'default');
+            $queue = $this->stringOption('queue') ?? 'default';
+            $connection = $this->stringOption('connection');
             $sleep = (int) $this->option('sleep', 3);
             $maxMemory = (int) $this->option('memory', 128);
 
@@ -67,7 +71,9 @@ class QueueRunCommand extends Command
             $maxLimit = $this->option('limit');
             $maxLimit = $maxLimit !== null ? (int) $maxLimit : null;
 
-            $this->displaySuccess("Starting queue worker on queue: {$queue}");
+            $this->displaySuccess(
+                "Starting queue worker on queue: {$queue} (connection: " . ($connection ?? $this->manager->getDefaultConnection()) . ')'
+            );
             $configInfo = "Configuration: sleep={$sleep}s, memory={$maxMemory}MB, timeout=";
 
             if ($maxTime > 0) {
@@ -105,6 +111,7 @@ class QueueRunCommand extends Command
                     'maxMemory' => $maxMemory,
                     'maxExecutionTime' => $maxTime,
                     'maxJobs' => $maxLimit,
+                    'connection' => $connection,
                 ]);
 
                 return Command::SUCCESS;

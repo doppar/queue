@@ -3,35 +3,37 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
-use Doppar\Queue\Models\FailedJob;
+use Doppar\Queue\Commands\Concerns\ReadsOptions;
+use Doppar\Queue\QueueManager;
 
 class QueueFailedCommand extends Command
 {
+    use ReadsOptions;
+
     /**
-     * The name of the console command.
+     * The name and signature of the console command.
      *
      * @var string
      */
-    protected $name = 'queue:failed';
+    protected $name = 'queue:failed {--connection=}';
 
     /**
-     * The command description.
+     * The console command description.
      *
      * @var string
      */
     protected $description = 'List all failed jobs';
 
     /**
-     * Execute the console command
-     * Example: php pool queue:failed
+     * Execute the console command.
      *
      * @return int
      */
     public function handle(): int
     {
-        $failedJobs = FailedJob::orderBy('failed_at', 'desc')->get();
+        $failedJobs = app(QueueManager::class)->connection($this->stringOption('connection'))->failedJobs();
 
-        if ($failedJobs->isEmpty()) {
+        if ($failedJobs === []) {
             $this->info("No failed jobs found.");
             return Command::SUCCESS;
         }
@@ -41,20 +43,18 @@ class QueueFailedCommand extends Command
         $table->setHeaders(['ID', 'Job', 'Queue', 'Failed At']);
 
         foreach ($failedJobs as $job) {
-            $payload = $job->payload;
-            $data = unserialize($payload);
+            $data = @unserialize($job->payload);
 
             $jobClass = null;
-            if ($data && isset($data['job']) && is_object($data['job'])) {
+            if (is_array($data) && isset($data['job']) && is_object($data['job'])) {
                 $jobClass = get_class($data['job']);
             }
 
-            $failedAt = date('Y-m-d H:i:s', $job->failed_at);
             $table->addRow([
                 $job->id,
                 $jobClass,
                 $job->queue,
-                $failedAt
+                date('Y-m-d H:i:s', $job->failedAt),
             ]);
         }
 

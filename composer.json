@@ -17,7 +17,8 @@
         "doppar/framework": "4.*",
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^13.3"
+        "phpunit/phpunit": "^13.3",
+        "predis/predis": "^3.3"
     },
     "autoload": {
         "psr-4": {
@@ -36,6 +37,9 @@
     "require": {
         "php": "^8.5",
         "opis/closure": "^4.5"
+    },
+    "suggest": {
+        "predis/predis": "Required to use the \"redis\" queue driver."
     },
     "prefer-stable": true,
     "scripts": {

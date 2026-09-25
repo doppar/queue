@@ -51,6 +51,18 @@ trait InteractsWithQueueableAttributes
             if ($attribute->timeout !== null) {
                 $this->timeout = $attribute->timeout;
             }
+
+            if ($attribute->priority !== null) {
+                $this->priority = $attribute->priority;
+            }
+
+            if ($attribute->onConnection !== null) {
+                $this->connection = $attribute->onConnection;
+            }
+
+            if ($attribute->backoff !== null) {
+                $this->backoff = $attribute->backoff;
+            }
         }
     }
 }
