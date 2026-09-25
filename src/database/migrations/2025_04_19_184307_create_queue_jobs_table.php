@@ -18,8 +18,11 @@ return new class extends Migration
             $table->string('queue')->index();
             $table->longText('payload');
             $table->unsignedTinyInteger('attempts')->default(0);
+            $table->smallInteger('priority')->default(0);
             $table->unsignedInteger('reserved_at')->index()->nullable();
+            $table->unsignedInteger('lease_expires_at')->nullable();
             $table->unsignedInteger('available_at');
+            $table->string('unique_key', 191)->nullable()->unique();
             $table->unsignedInteger('created_at');
         });
 

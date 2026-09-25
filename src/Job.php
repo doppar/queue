@@ -61,6 +61,27 @@ abstract class Job implements JobInterface
     public $timeout = null;
 
     /**
+     * Higher priority jobs are claimed first within a queue (-100 to 100).
+     *
+     * @var int
+     */
+    public int $priority = 0;
+
+    /**
+     * The queue connection to dispatch on. Null uses the default connection.
+     *
+     * @var string|null
+     */
+    public ?string $connection = null;
+
+    /**
+     * Seconds to wait before each retry
+     *
+     * @var int|array<int, int>|null
+     */
+    public $backoff = null;
+
+    /**
      * Chain identifier (if this job is part of a chain).
      *
      * @var string|null
@@ -168,6 +189,72 @@ abstract class Job implements JobInterface
     }
 
     /**
+     * Get the priority of the job.
+     *
+     * @return int
+     */
+    public function priority(): int
+    {
+        return $this->priority;
+    }
+
+    /**
+     * Get the queue connection the job is dispatched on, or null for the default.
+     *
+     * @return string|null
+     */
+    public function connection(): ?string
+    {
+        return $this->connection;
+    }
+
+    /**
+     * Get the key that makes this job unique, or null when duplicates are allowed.
+     *
+     * @return string|null
+     */
+    public function uniqueId(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Get the retry backoff.
+     *
+     * @return int|array<int, int>|null
+     */
+    public function backoff(): int|array|null
+    {
+        return $this->backoff;
+    }
+
+    /**
+     * Set the priority of the job.
+     *
+     * @param int $priority
+     * @return self
+     */
+    public function withPriority(int $priority): self
+    {
+        $this->priority = $priority;
+
+        return $this;
+    }
+
+    /**
+     * Set the queue connection of the job.
+     *
+     * @param string $connection
+     * @return self
+     */
+    public function onConnection(string $connection): self
+    {
+        $this->connection = $connection;
+
+        return $this;
+    }
+
+    /**
      * Set the queue name.
      *
      * @param string $queue
@@ -225,9 +312,9 @@ abstract class Job implements JobInterface
      * Dispatch the job to the queue after a delay.
      *
      * @param int $delay Delay in seconds
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public function dispatchAfter(int $delay): string
+    public function dispatchAfter(int $delay): ?string
     {
         $this->delayFor($delay);
 
@@ -240,9 +327,9 @@ abstract class Job implements JobInterface
      * Dispatch the job to a specific queue.
      *
      * @param string $queue
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public function dispatchOn(string $queue): string
+    public function dispatchOn(string $queue): ?string
     {
         $this->onQueue($queue);
 
@@ -255,9 +342,9 @@ abstract class Job implements JobInterface
      * Dispatch the job.
      *
      * @param mixed ...$args
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public static function dispatchNow(...$args): string
+    public static function dispatchNow(...$args): ?string
     {
         $job = new static(...$args);
 
@@ -280,9 +367,9 @@ abstract class Job implements JobInterface
     /**
      * Force the job to be queued even without Queueable attribute.
      *
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public function forceQueue(): string
+    public function forceQueue(): ?string
     {
         $this->applyQueueableAttributes();
 
@@ -361,6 +448,10 @@ abstract class Job implements JobInterface
         $nextJob->chainOnComplete = $this->chainOnComplete;
         $nextJob->chainOnFailure = $this->chainOnFailure;
         $nextJob->queueName = $this->queueName;
+
+        if ($nextJob instanceof self) {
+            $nextJob->connection ??= $this->connection;
+        }
 
         // Push the next job to queue
         Queue::push($nextJob);

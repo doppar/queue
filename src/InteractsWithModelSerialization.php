@@ -33,8 +33,10 @@ trait InteractsWithModelSerialization
         $properties = $reflection->getProperties();
 
         foreach ($properties as $property) {
-
-            if (!$property->isInitialized($this)) {
+            // Static properties belong to the class, not the instance. Serializing
+            // them would freeze their value into the payload and write it back over
+            // the live value when the worker unserializes the job.
+            if ($property->isStatic() || !$property->isInitialized($this)) {
                 continue;
             }
 
@@ -78,6 +80,11 @@ trait InteractsWithModelSerialization
             }
 
             $property = $reflection->getProperty($name);
+
+            // Payloads written before static properties were excluded may still carry them.
+            if ($property->isStatic()) {
+                continue;
+            }
 
             // Restore serialized models
             if (is_array($value) && isset($value['__serialized_model__'])) {
@@ -369,7 +376,7 @@ trait InteractsWithModelSerialization
         $reflection = new \ReflectionClass($this);
 
         foreach ($reflection->getProperties() as $property) {
-            if ($property->isInitialized($this)) {
+            if (!$property->isStatic() && $property->isInitialized($this)) {
                 $values[$property->getName()] = $property->getValue($this);
             }
         }

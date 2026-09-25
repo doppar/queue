@@ -31,9 +31,9 @@ trait Dispatchable
      *
      * @param int $delay
      * @param mixed ...$args
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public static function queueAfter(int $delay, ...$args): string
+    public static function queueAfter(int $delay, ...$args): ?string
     {
         return (new static(...$args))->delayFor($delay)->forceQueue();
     }
@@ -43,9 +43,9 @@ trait Dispatchable
      *
      * @param string $queue
      * @param mixed ...$args
-     * @return string Job ID
+     * @return string|null Job ID, or null when refused as a duplicate of a unique job
      */
-    public static function queueOn(string $queue, ...$args): string
+    public static function queueOn(string $queue, ...$args): ?string
     {
         return (new static(...$args))->onQueue($queue)->forceQueue();
     }

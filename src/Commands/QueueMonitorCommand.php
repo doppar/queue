@@ -3,20 +3,22 @@
 namespace Doppar\Queue\Commands;
 
 use Phaseolies\Console\Schedule\Command;
-use Doppar\Queue\Models\QueueJob;
-use Doppar\Queue\Models\FailedJob;
+use Doppar\Queue\Commands\Concerns\ReadsOptions;
+use Doppar\Queue\QueueManager;
 
 class QueueMonitorCommand extends Command
 {
+    use ReadsOptions;
+
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $name = 'queue:monitor';
+    protected $name = 'queue:monitor {--connection=}';
 
     /**
-     * The description of the console command.
+     * The console command description.
      *
      * @var string
      */
@@ -29,39 +31,34 @@ class QueueMonitorCommand extends Command
      */
     public function handle(): int
     {
-        $queues = QueueJob::groupBy('queue')->pluck('queue');
+        $manager = app(QueueManager::class);
+        $connection = $this->stringOption('connection');
+        $driver = $manager->connection($connection);
 
         // Create table for queue statistics
         $table = $this->createTable();
-        $table->setHeaders(['Queue', 'Pending', 'Processing']);
+        $table->setHeaders(['Queue', 'Ready', 'Delayed', 'Processing']);
 
-        foreach ($queues ?? [] as $queue) {
-            $pending = QueueJob::where('queue', $queue)
-                ->whereNull('reserved_at')
-                ->count();
-
-            $processing = QueueJob::where('queue', $queue)
-                ->whereNotNull('reserved_at')
-                ->count();
+        foreach ($driver->queues() as $queue) {
+            $stats = $driver->stats($queue);
 
             $table->addRow([
                 $queue,
-                $pending,
-                $processing,
+                $stats['ready'],
+                $stats['delayed'],
+                $stats['reserved'],
             ]);
         }
 
         // Render queue table
         $this->newLine();
-        $this->info("Queue Statistics");
+        $this->info("Queue Statistics (connection: " . ($connection ?? $manager->getDefaultConnection()) . ")");
         $table->render();
 
         // Failed jobs table
-        $failedCount = FailedJob::count();
-
         $failedTable = $this->createTable();
         $failedTable->setHeaders(['Metric', 'Value']);
-        $failedTable->addRow(['Failed Jobs', $failedCount]);
+        $failedTable->addRow(['Failed Jobs', $driver->countFailed()]);
 
         $this->info("\nFailed Jobs Summary");
         $failedTable->render();

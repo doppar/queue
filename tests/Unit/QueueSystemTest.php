@@ -13,6 +13,7 @@ use Doppar\Queue\Tests\Mock\TestQueueManager;
 use Doppar\Queue\Tests\Mock\Models\MockQueueJob;
 use Doppar\Queue\Tests\Mock\Models\MockFailedJob;
 use Doppar\Queue\Tests\Mock\MockContainer;
+use Doppar\Queue\Tests\Support\QueueSchema;
 use Doppar\Queue\Tests\Mock\Jobs\TestReportJob;
 use Doppar\Queue\Tests\Mock\Jobs\TestJobWithFailedCallback;
 use Doppar\Queue\Tests\Mock\Jobs\TestImageJob;
@@ -52,7 +53,10 @@ class QueueSystemTest extends TestCase
         $this->createQueueTables();
         $this->setupDatabaseConnections();
 
-        $this->manager = new QueueManager();
+        $this->manager = new QueueManager([
+            'default' => 'database',
+            'connections' => ['database' => ['driver' => 'database', 'connection' => 'default']],
+        ]);
         $this->worker = new QueueWorker($this->manager);
 
         TestChainJobA::reset();
@@ -71,38 +75,7 @@ class QueueSystemTest extends TestCase
 
     private function createQueueTables(): void
     {
-        // Create queue_jobs table
-        $this->pdo->exec("
-            CREATE TABLE queue_jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                queue TEXT NOT NULL,
-                payload TEXT NOT NULL,
-                attempts INTEGER DEFAULT 0,
-                reserved_at INTEGER,
-                available_at INTEGER NOT NULL,
-                created_at INTEGER NOT NULL
-            )
-        ");
-
-        $this->pdo->exec("
-            CREATE INDEX idx_queue_reserved ON queue_jobs(queue, reserved_at)
-        ");
-
-        // Create failed_jobs table
-        $this->pdo->exec("
-            CREATE TABLE failed_jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                connection TEXT NOT NULL,
-                queue TEXT NOT NULL,
-                payload TEXT NOT NULL,
-                exception TEXT NOT NULL,
-                failed_at INTEGER NOT NULL
-            )
-        ");
-
-        $this->pdo->exec("
-            CREATE INDEX idx_failed_at ON failed_jobs(failed_at)
-        ");
+        QueueSchema::create($this->pdo);
     }
 
     private function setupDatabaseConnections(): void
