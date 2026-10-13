@@ -420,6 +420,17 @@ class QueueWorker
      */
     protected function executeJob(JobInterface $job): void
     {
+        $app = app();
+
+        // Each job is its own execution: callbacks it registers with defer()
+        // run when it finishes, after success or failure, and never leak
+        // into the next job handled by this worker.
+        if (is_object($app) && method_exists($app, 'runInDeferScope')) {
+            $app->runInDeferScope(static fn() => $job->handle());
+
+            return;
+        }
+
         $job->handle();
     }
 

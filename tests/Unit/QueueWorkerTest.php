@@ -549,4 +549,92 @@ class QueueWorkerTest extends TestCase
 
         $this->assertStringContainsString('Could not renew job lease: redis timeout', $this->output);
     }
+
+    // ------------------------------------------------------------------
+    // Deferred cleanup
+    // ------------------------------------------------------------------
+
+    /**
+     * Install a container that implements the framework's defer scope API.
+     *
+     * @return object{log: array<int, string>}
+     */
+    private function installDeferAwareContainer(): object
+    {
+        $container = new class extends MockContainer {
+            public array $log = [];
+
+            public int $scopes = 0;
+
+            private array $stack = [];
+
+            public function defer(callable $callback): static
+            {
+                if ($this->stack === []) {
+                    throw new \LogicException('defer() outside a scope');
+                }
+
+                $this->stack[array_key_last($this->stack)][] = $callback;
+
+                return $this;
+            }
+
+            public function runInDeferScope(callable $callback): mixed
+            {
+                $this->scopes++;
+                $this->stack[] = [];
+
+                try {
+                    return $callback();
+                } finally {
+                    foreach (array_reverse(array_pop($this->stack)) as $cleanup) {
+                        $cleanup();
+                    }
+                }
+            }
+        };
+
+        Container::setInstance($container);
+        $container->singleton(QueueManager::class, fn() => $this->manager);
+        $container->alias(QueueManager::class, 'queue.worker');
+
+        return $container;
+    }
+
+    public function testEachJobRunsInItsOwnDeferScope(): void
+    {
+        $container = $this->installDeferAwareContainer();
+
+        RecordingJob::$during = function (RecordingJob $job) use ($container) {
+            $label = $job->label;
+            $container->defer(function () use ($container, $label) { $container->log[] = "cleanup-{$label}"; });
+            $container->log[] = "run-{$label}";
+        };
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->manager->push(new RecordingJob('b'));
+
+        $this->runOne();
+        $this->runOne();
+
+        $this->assertSame(2, $container->scopes);
+        $this->assertSame(['run-a', 'cleanup-a', 'run-b', 'cleanup-b'], $container->log);
+    }
+
+    public function testDeferredCallbacksRunWhenAJobFailsBeforeItIsReleased(): void
+    {
+        $container = $this->installDeferAwareContainer();
+
+        RecordingJob::$during = function () use ($container) {
+            $container->defer(function () use ($container) { $container->log[] = 'cleanup'; });
+
+            throw new \RuntimeException('job failed');
+        };
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->runOne();
+
+        $this->assertSame(['cleanup'], $container->log);
+        $this->assertSame(1, $this->driver()->stats('default')['delayed'] + $this->driver()->countFailed());
+    }
 }
