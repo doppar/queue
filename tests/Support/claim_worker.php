@@ -10,6 +10,10 @@
  * job and kills itself with SIGKILL without acknowledging it.
  */
 
+// Deprecation notices printed by third-party packages while the autoloader loads
+// (an old Mockery on PHP 8.5, for example) are noise here; real warnings still show.
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 require __DIR__ . '/../../vendor/autoload.php';
 
 use Doppar\Queue\Drivers\DatabaseDriver;
