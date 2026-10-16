@@ -235,12 +235,42 @@ class QueueWorker
      */
     protected function processJob(ReservedJob $queueJob): void
     {
+        $app = app();
+
+        $lifecycle = fn() => $this->runJobLifecycle($queueJob);
+
+        if (is_object($app) && method_exists($app, 'runInDeferScope')) {
+            $lifecycle = fn() => $app->runInDeferScope(fn() => $this->runJobLifecycle($queueJob));
+        }
+
+        if (is_object($app) && method_exists($app, 'runInContext')) {
+            $app->runInContext('worker', $this->executionMetadata($queueJob), $lifecycle);
+
+            return;
+        }
+
+        $lifecycle();
+    }
+
+    /**
+     * Run the full lifecycle of a reserved job
+     *
+     * @param ReservedJob $queueJob
+     * @return void
+     */
+    protected function runJobLifecycle(ReservedJob $queueJob): void
+    {
         $job = null;
 
         try {
             // Unserialize the job
             $job = $this->manager->unserializeJob($queueJob->payload);
             $job->attempts = $queueJob->attempts;
+
+            $this->stampExecution([
+                'job' => $job::class,
+                'job_id' => $job->getJobId(),
+            ]);
 
             // A job whose lease expired mid-run comes back with its attempts
             // already spent; do not run it again.
@@ -298,6 +328,42 @@ class QueueWorker
             }
         } catch (\Throwable $e) {
             $this->logError("Post-processing of job {$job->getJobId()} failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Describe a reserved job for its worker execution context
+     *
+     * @param ReservedJob $queueJob
+     * @return array<string, mixed>
+     */
+    protected function executionMetadata(ReservedJob $queueJob): array
+    {
+        return [
+            'queue' => $queueJob->queue,
+            'queue_job_id' => $queueJob->id,
+            'attempt' => $queueJob->attempts,
+            'connection' => $this->connection,
+        ];
+    }
+
+    /**
+     * Add metadata to the active execution context, when the framework has one.
+     *
+     * @param array<string, mixed> $metadata
+     * @return void
+     */
+    protected function stampExecution(array $metadata): void
+    {
+        $app = app();
+
+        if (
+            is_object($app)
+            && method_exists($app, 'stampContext')
+            && method_exists($app, 'hasExecutionContext')
+            && $app->hasExecutionContext()
+        ) {
+            $app->stampContext(array_filter($metadata, static fn($value) => $value !== null));
         }
     }
 
