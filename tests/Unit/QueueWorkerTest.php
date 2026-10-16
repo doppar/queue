@@ -10,6 +10,7 @@ use Doppar\Queue\QueueWorker;
 use Doppar\Queue\Support\Envelope;
 use Doppar\Queue\Support\ReservedJob;
 use Doppar\Queue\Tests\Mock\Jobs\BackoffJob;
+use Doppar\Queue\Tests\Mock\Jobs\DeferringFailedJob;
 use Doppar\Queue\Tests\Mock\Jobs\FlakyJob;
 use Doppar\Queue\Tests\Mock\Jobs\RecordingJob;
 use Doppar\Queue\Tests\Mock\Jobs\UniqueRecordingJob;
@@ -55,6 +56,7 @@ class QueueWorkerTest extends TestCase
     protected function tearDown(): void
     {
         RecordingJob::reset();
+        DeferringFailedJob::reset();
         Container::forgetInstance();
     }
 
@@ -566,12 +568,17 @@ class QueueWorkerTest extends TestCase
 
             public int $scopes = 0;
 
-            private array $stack = [];
+            /**
+             * Callbacks that reached the outermost (daemon level) scope.
+             */
+            public int $leakedToOuterScope = 0;
+
+            private array $stack = [[]];
 
             public function defer(callable $callback): static
             {
-                if ($this->stack === []) {
-                    throw new \LogicException('defer() outside a scope');
+                if (array_key_last($this->stack) === 0) {
+                    $this->leakedToOuterScope++;
                 }
 
                 $this->stack[array_key_last($this->stack)][] = $callback;
@@ -617,8 +624,131 @@ class QueueWorkerTest extends TestCase
         $this->runOne();
         $this->runOne();
 
-        $this->assertSame(2, $container->scopes);
+        // One scope for running the job body and one around its whole lifecycle.
+        $this->assertSame(4, $container->scopes);
         $this->assertSame(['run-a', 'cleanup-a', 'run-b', 'cleanup-b'], $container->log);
+    }
+
+    /**
+     * The worker only opens contexts when the installed framework has them.
+     */
+    private function requireExecutionContexts(): void
+    {
+        if (!method_exists(Container::class, 'runInContext')) {
+            $this->markTestSkipped('The installed framework has no execution context support.');
+        }
+    }
+
+    /**
+     * Collect the final state of every context as it ends.
+     *
+     * @return \ArrayObject<int, \Phaseolies\Support\ExecutionContext>
+     */
+    private function recordEndedContexts(object $container): \ArrayObject
+    {
+        $ended = new \ArrayObject();
+        $container->contextEnding(function ($context) use ($ended) {
+            $ended[] = $context;
+        });
+
+        return $ended;
+    }
+
+    public function testEachJobRunsInItsOwnWorkerContextWithJobMetadata(): void
+    {
+        $this->requireExecutionContexts();
+        $container = $this->installDeferAwareContainer();
+        $ended = $this->recordEndedContexts($container);
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->manager->push(new RecordingJob('b'));
+
+        $this->runOne();
+        $this->runOne();
+
+        $this->assertCount(2, $ended);
+
+        [$first, $second] = $ended->getArrayCopy();
+
+        $this->assertSame('worker', $first->type());
+        $this->assertNotSame($first->id(), $second->id());
+        $this->assertSame('default', $first->get('queue'));
+        $this->assertSame(1, $first->get('attempt'));
+        $this->assertSame(RecordingJob::class, $first->get('job'));
+        $this->assertNotEmpty($first->get('job_id'));
+        $this->assertNotSame($first->get('queue_job_id'), $second->get('queue_job_id'));
+        $this->assertFalse($container->hasExecutionContext(), 'no context outlives the job');
+    }
+
+    public function testExecutionScopedStateIsNotSharedBetweenSequentialJobs(): void
+    {
+        $this->requireExecutionContexts();
+        $container = $this->installDeferAwareContainer();
+        $container->bindExecution('job.state', fn() => new \stdClass());
+        $seen = [];
+
+        RecordingJob::$during = function (RecordingJob $job) use ($container, &$seen) {
+            $state = $container->get('job.state');
+            $state->count = ($state->count ?? 0) + 1;
+            $seen[$job->label] = ['object' => spl_object_id($state), 'count' => $state->count];
+        };
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->manager->push(new RecordingJob('b'));
+
+        $this->runOne();
+        $this->runOne();
+
+        $this->assertSame(1, $seen['a']['count']);
+        $this->assertSame(1, $seen['b']['count'], 'the second job must start from fresh state');
+    }
+
+    public function testDeferInsideFailedIsIsolatedToTheJobInsteadOfTheWorkerScope(): void
+    {
+        $container = $this->installDeferAwareContainer();
+
+        DeferringFailedJob::$inFailed = function () use ($container) {
+            $container->defer(function () use ($container) { $container->log[] = 'failed-cleanup'; });
+            $container->log[] = 'failed-ran';
+        };
+
+        $this->manager->push(new DeferringFailedJob());
+        $this->runOne();
+
+        $this->assertSame(0, $container->leakedToOuterScope, 'nothing may accumulate in the worker command scope');
+        $this->assertSame(['failed-ran', 'failed-cleanup'], $container->log);
+    }
+
+    public function testDeferInsideTheProcessedHookIsIsolatedToTheJob(): void
+    {
+        $container = $this->installDeferAwareContainer();
+
+        $this->worker->setOnJobProcessed(function () use ($container) {
+            $container->defer(function () use ($container) { $container->log[] = 'hook-cleanup'; });
+        });
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->runOne();
+
+        $this->assertSame(0, $container->leakedToOuterScope);
+        $this->assertSame(['hook-cleanup'], $container->log);
+    }
+
+    public function testContextEndsEvenWhenTheJobFails(): void
+    {
+        $this->requireExecutionContexts();
+        $container = $this->installDeferAwareContainer();
+        $ended = $this->recordEndedContexts($container);
+
+        RecordingJob::$during = function () {
+            throw new \RuntimeException('boom');
+        };
+
+        $this->manager->push(new RecordingJob('a'));
+        $this->runOne();
+
+        $this->assertFalse($container->hasExecutionContext());
+        $this->assertCount(1, $ended);
     }
 
     public function testDeferredCallbacksRunWhenAJobFailsBeforeItIsReleased(): void
