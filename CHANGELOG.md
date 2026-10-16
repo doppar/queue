@@ -1,5 +1,14 @@
 # Release Notes
 
+## v4.2.0 - 2026-10-16
+
+### What's Changed
+
+* (feat) Worker: run every job in its own `defer()` scope by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/32
+* support defer and execution context for each job by [@techmahedy](https://github.com/techmahedy) in https://github.com/doppar/queue/pull/33
+
+**Full Changelog**: https://github.com/doppar/queue/compare/v4.1.0...v4.2.0
+
 ## v4.1.0 - 2026-09-25
 
 ### What's Changed
